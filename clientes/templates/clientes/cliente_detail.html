@@ -1,0 +1,74 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<div class="card shadow-sm mb-4">
+    <div class="card-body">
+        <div class="d-flex justify-content-between align-items-center">
+            <h1 class="h4 mb-0">
+                👤 {{ cliente.nombre_completo }}
+                {% if cliente.activo %}
+                    <span class="badge bg-success">Activo</span>
+                {% else %}
+                    <span class="badge bg-danger">Inactivo</span>
+                {% endif %}
+            </h1>
+            <div>
+                <a href="{% url 'clientes:cliente_update' cliente.pk %}" class="btn btn-warning btn-sm me-2">✏ Editar</a>
+                <a href="{% url 'clientes:cliente_delete' cliente.pk %}" class="btn btn-danger btn-sm">🗑 Eliminar</a>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row g-4">
+    <!-- Información personal -->
+    <div class="col-md-6">
+        <div class="card shadow-sm h-100">
+            <div class="card-header bg-primary text-white">
+                Información Personal
+            </div>
+            <div class="card-body">
+                <p><strong>ID Interno:</strong> {{ cliente.numero_unico }}</p>
+                <p><strong>N° Identificación:</strong> {{ cliente.numero_identificacion }}</p>
+                <p><strong>Tipo de Persona:</strong> {{ cliente.get_tipo_persona_display }}</p>
+                <p><strong>Email:</strong> <span class="badge bg-info">{{ cliente.email }}</span></p>
+                <p><strong>Teléfono:</strong> {{ cliente.telefono|default:"-" }}</p>
+                <p><strong>Dirección:</strong> {{ cliente.direccion|default:"No registrada" }}</p>
+                <p><strong>Ciudad:</strong> {{ cliente.ciudad }}</p>
+            </div>
+        </div>
+    </div>
+
+    <!-- Información financiera -->
+    <div class="col-md-6">
+        <div class="card shadow-sm h-100">
+            <div class="card-header bg-dark text-white">
+                Información Financiera
+            </div>
+            <div class="card-body">
+                <p><strong>Forma de Pago:</strong> {{ cliente.get_forma_pago_display }}</p>
+                {% if cliente.forma_pago == "otro" %}
+                    <p><strong>Días de Crédito:</strong> {{ cliente.dias_credito }}</p>
+                {% endif %}
+                <p>
+                    <strong>Saldo:</strong>
+                    {% if cliente.saldo > 0 %}
+                        <span class="badge bg-danger">💰 ${{ cliente.saldo }}</span>
+                    {% else %}
+                        <span class="badge bg-success">✔ Sin deuda</span>
+                    {% endif %}
+                </p>
+                <hr>
+                <small class="text-muted">
+                    Creado: {{ cliente.fecha_creacion|date:"d/m/Y H:i" }} <br>
+                    Última actualización: {{ cliente.fecha_actualizacion|date:"d/m/Y H:i" }}
+                </small>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="mt-4">
+    <a href="{% url 'clientes:cliente_list' %}" class="btn btn-secondary">⬅ Volver a la lista</a>
+</div>
+{% endblock %}

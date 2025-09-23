@@ -1,0 +1,91 @@
+{% extends 'base.html' %}
+{% load widget_tweaks %}  {# Necesario si usas django-widget-tweaks #}
+
+{% block content %}
+<div class="container mt-5">
+    <div class="card shadow-sm border-0 rounded-4">
+        <div class="card-header bg-primary text-white rounded-top-4">
+            <h3 class="mb-0">
+                {% if form.instance.pk %}
+                    <i class="bi bi-pencil-square me-2"></i> Editar Cliente
+                {% else %}
+                    <i class="bi bi-person-plus-fill me-2"></i> Nuevo Cliente
+                {% endif %}
+            </h3>
+        </div>
+
+        <div class="card-body p-4">
+            <form method="post" novalidate>
+                {% csrf_token %}
+
+                <div class="row g-3">
+                    {% for field in form %}
+                        <div class="col-md-6">
+                            <label for="{{ field.id_for_label }}" class="form-label fw-semibold">
+                                {{ field.label }}
+                            </label>
+                            {{ field|add_class:"form-control" }}
+                            {% if field.help_text %}
+                                <div class="form-text text-muted">{{ field.help_text }}</div>
+                            {% endif %}
+                            {% if field.errors %}
+                                <div class="text-danger small">{{ field.errors|striptags }}</div>
+                            {% endif %}
+                        </div>
+                    {% endfor %}
+                </div>
+
+                <div class="d-flex justify-content-end gap-2 mt-4">
+                    <a href="{% url 'clientes:cliente_list' %}" class="btn btn-outline-secondary px-4">
+                        <i class="bi bi-x-circle me-1"></i> Cancelar
+                    </a>
+                    <button type="submit" class="btn btn-success px-4">
+                        <i class="bi bi-save me-1"></i>
+                        {% if form.instance.pk %}Actualizar Cliente{% else %}Guardar Cliente{% endif %}
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+{# Modal de confirmación para eliminar cliente #}
+{% if form.instance.pk %}
+<div class="container mt-3">
+    <button class="btn btn-danger" data-bs-toggle="modal" data-bs-target="#confirmDeleteModal">
+        <i class="bi bi-trash me-1"></i> Eliminar Cliente
+    </button>
+</div>
+
+<div class="modal fade" id="confirmDeleteModal" tabindex="-1" aria-hidden="true">
+  <div class="modal-dialog modal-dialog-centered">
+    <div class="modal-content border-0 shadow-lg">
+      <div class="modal-header bg-danger text-white">
+        <h5 class="modal-title"><i class="bi bi-exclamation-triangle me-2"></i> Confirmar Eliminación</h5>
+        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+      </div>
+      <div class="modal-body">
+        ¿Estás seguro de que deseas eliminar al cliente <strong>{{ form.instance.nombre_completo }}</strong>? 
+        Esta acción no se puede deshacer.
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+        <a href="{% url 'clientes:cliente_delete' form.instance.pk %}" class="btn btn-danger">Eliminar</a>
+      </div>
+    </div>
+  </div>
+</div>
+{% endif %}
+
+<style>
+    body {
+        font-family: 'Poppins', sans-serif;
+    }
+    .btn {
+        transition: all 0.2s ease-in-out;
+    }
+    .btn:hover {
+        transform: translateY(-1px);
+    }
+</style>
+{% endblock %}
