@@ -43,6 +43,7 @@ INSTALLED_APPS = [
     'cartera',
     'core',
     'productos',
+    'embarques',
     'widget_tweaks',
 
     # Para API

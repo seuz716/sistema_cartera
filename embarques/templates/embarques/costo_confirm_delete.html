@@ -1,0 +1,25 @@
+{% extends 'base.html' %}
+{% block content %}
+<div class="container mt-5">
+    <div class="card shadow-sm border-0 rounded-4">
+        <div class="card-header bg-danger text-white rounded-top-4">
+            <h3 class="mb-0"><i class="bi bi-trash me-2"></i> Eliminar Costo</h3>
+        </div>
+        <div class="card-body p-4">
+            <p>¿Estás seguro de que deseas eliminar el costo <strong>{{ object.tipo.nombre }}</strong> del embarque <strong>{{ object.embarque.numero }}</strong>? Esta acción no se puede deshacer.</p>
+
+            <div class="d-flex justify-content-end gap-2 mt-4">
+                <a href="{% url 'embarques:detalle' object.embarque.pk %}" class="btn btn-outline-secondary px-4">
+                    <i class="bi bi-x-circle me-1"></i> Cancelar
+                </a>
+                <form method="post" class="d-inline">
+                    {% csrf_token %}
+                    <button type="submit" class="btn btn-danger px-4">
+                        <i class="bi bi-trash me-1"></i> Eliminar
+                    </button>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

@@ -1,0 +1,58 @@
+{% extends 'base.html' %}
+{% load widget_tweaks %}
+
+{% block content %}
+<div class="container mt-5">
+    <div class="d-flex justify-content-between align-items-center mb-3">
+        <h2><i class="bi bi-truck me-2"></i> Lista de Embarques</h2>
+        <a href="{% url 'embarques:crear' %}" class="btn btn-success">
+            <i class="bi bi-plus-circle me-1"></i> Nuevo Embarque
+        </a>
+    </div>
+
+    <div class="card shadow-sm border-0 rounded-4">
+        <div class="card-body p-4">
+            {% if object_list %}
+                <table class="table table-hover align-middle">
+                    <thead class="table-light">
+                        <tr>
+                            <th>Número</th>
+                            <th>Fecha</th>
+                            <th>Conductor</th>
+                            <th>Vehículo</th>
+                            <th>Placa</th>
+                            <th>Total Costos</th>
+                            <th></th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for embarque in object_list %}
+                        <tr>
+                            <td>{{ embarque.numero }}</td>
+                            <td>{{ embarque.fecha|date:"d/m/Y" }}</td>
+                            <td>{{ embarque.conductor }}</td>
+                            <td>{{ embarque.vehiculo }}</td>
+                            <td>{{ embarque.placa }}</td>
+                            <td>${{ embarque.costo_total }}</td>
+                            <td class="text-end">
+                                <a href="{% url 'embarques:detalle' embarque.pk %}" class="btn btn-sm btn-outline-primary">
+                                    <i class="bi bi-eye"></i>
+                                </a>
+                                <a href="{% url 'embarques:editar' embarque.pk %}" class="btn btn-sm btn-outline-warning">
+                                    <i class="bi bi-pencil"></i>
+                                </a>
+                                <a href="{% url 'embarques:eliminar' embarque.pk %}" class="btn btn-sm btn-outline-danger">
+                                    <i class="bi bi-trash"></i>
+                                </a>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            {% else %}
+                <p class="text-muted">No hay embarques registrados aún.</p>
+            {% endif %}
+        </div>
+    </div>
+</div>
+{% endblock %}
