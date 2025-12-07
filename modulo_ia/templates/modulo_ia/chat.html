@@ -1,0 +1,139 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Raya al Piso IA</title>
+
+    <!-- Tailwind CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+
+    <style>
+        .message-user { background: #2563eb; color: white; }
+        .message-ai   { background: #f1f5f9; color: #111827; }
+    </style>
+</head>
+<body class="bg-gray-100">
+
+    <div class="max-w-3xl mx-auto mt-6">
+
+        <h1 class="text-3xl font-bold text-center mb-4 text-blue-700">
+            🤖 Módulo Raya al Piso IA
+        </h1>
+
+        <!-- Caja del chat -->
+        <div id="chat-box" 
+             class="bg-white shadow-xl rounded-xl p-5 h-[70vh] overflow-y-auto border">
+        </div>
+
+        <!-- Indicador de escritura -->
+        <div id="typing-indicator" class="hidden text-gray-600 mt-2 text-sm">
+            La IA está escribiendo...
+        </div>
+
+        <!-- Input -->
+        <div class="mt-4 flex">
+            <input id="user-input"
+                   type="text"
+                   placeholder="Escribe tu mensaje..."
+                   class="flex-grow px-4 py-3 border rounded-l-xl shadow focus:outline-none">
+
+            <button id="send-btn"
+                    class="px-6 bg-blue-600 text-white font-semibold rounded-r-xl hover:bg-blue-700">
+                Enviar
+            </button>
+        </div>
+
+    </div>
+
+    <script>
+        const chatBox = document.getElementById("chat-box");
+        const userInput = document.getElementById("user-input");
+        const sendBtn   = document.getElementById("send-btn");
+        const typingIndicator = document.getElementById("typing-indicator");
+
+        /* ------------------------------------
+            Crear un mensaje en el chat
+        ------------------------------------ */
+        function addMessage(text, sender="ai") {
+            const bubble = document.createElement("div");
+
+            bubble.classList.add(
+                "p-3",
+                "my-2",
+                "rounded-xl",
+                "max-w-xl",
+                "shadow"
+            );
+
+            // Clases según remitente
+            if (sender === "user") {
+                bubble.classList.add("message-user", "ml-auto");
+            } else {
+                bubble.classList.add("message-ai");
+            }
+
+            bubble.innerHTML = text.replace(/\n/g, "<br>");
+            chatBox.appendChild(bubble);
+
+            // Auto scroll
+            chatBox.scrollTop = chatBox.scrollHeight;
+        }
+
+        /* ------------------------------------
+            Mostrar / ocultar indicador
+        ------------------------------------ */
+        function showTyping() {
+            typingIndicator.classList.remove("hidden");
+        }
+
+        function hideTyping() {
+            typingIndicator.classList.add("hidden");
+        }
+
+        /* ------------------------------------
+            Enviar mensaje
+        ------------------------------------ */
+        async function sendMessage() {
+            const text = userInput.value.trim();
+            if (!text) return;
+
+            addMessage(text, "user");
+            userInput.value = "";
+            showTyping();
+
+            try {
+                const response = await fetch("/api/ia/chat/", {
+                    method: "POST",
+                    headers: {"Content-Type": "application/json"},
+                    body: JSON.stringify({ message: text })
+                });
+
+                const data = await response.json();
+                hideTyping();
+
+                if (data.reply) {
+                    addMessage(data.reply, "ai");
+                } else {
+                    addMessage("❌ Error en la respuesta.", "ai");
+                }
+
+            } catch (err) {
+                hideTyping();
+                addMessage("❌ Error: No se pudo conectar con el servidor.", "ai");
+            }
+        }
+
+        /* ------------------------------------
+            Eventos
+        ------------------------------------ */
+        sendBtn.addEventListener("click", sendMessage);
+
+        // Enviar con Enter
+        userInput.addEventListener("keydown", (e) => {
+            if (e.key === "Enter") sendMessage();
+        });
+    </script>
+
+</body>
+</html>

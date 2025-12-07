@@ -1,0 +1,10 @@
+{% extends 'base.html' %}
+{% block content %}
+<h2>Eliminar proveedor</h2>
+<p>¿Estás seguro de eliminar al proveedor "{{ object.nombre }}"?</p>
+<form method="post">
+  {% csrf_token %}
+  <button type="submit" class="btn btn-danger">Sí, eliminar</button>
+  <a href="{% url 'proveedores:lista' %}" class="btn btn-secondary">Cancelar</a>
+</form>
+{% endblock %}

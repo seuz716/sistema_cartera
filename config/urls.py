@@ -10,6 +10,11 @@ urlpatterns = [
     path('clientes/', include('clientes.urls', namespace='clientes')),
     path('productos/', include('productos.urls', namespace='productos')),  
     path('embarques/', include('embarques.urls', namespace='embarques')),  # URLs de embarques
+    path('recoleccion/', include('recoleccion.urls')),
+    path('proveedores/', include('proveedores.urls')),
+    path('api/ia/', include('modulo_ia.urls')),
+
+
     # path('ventas/', include('ventas.urls', namespace='ventas')),
     # path('cartera/', include('cartera.urls', namespace='cartera')),
 ]

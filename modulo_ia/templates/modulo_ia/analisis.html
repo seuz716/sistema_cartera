@@ -1,0 +1,108 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Panel de Análisis – Raya al Piso IA</title>
+
+    <script src="https://cdn.tailwindcss.com"></script>
+
+</head>
+<body class="bg-gray-100">
+
+<div class="max-w-4xl mx-auto mt-10">
+
+    <h1 class="text-3xl font-bold text-center text-blue-700 mb-6">
+        📊 Panel de Análisis – Raya al Piso IA
+    </h1>
+
+    <!-- Tarjeta principal -->
+    <div class="bg-white shadow-xl rounded-xl p-6 border">
+
+        <!-- Campo de datos -->
+        <label class="block text-gray-700 font-semibold mb-2">
+            Datos a analizar (texto, JSON, listas, cartera, proveedores...)
+        </label>
+
+        <textarea id="data-input"
+                  class="w-full h-56 p-4 border rounded-xl focus:outline-none focus:ring focus:ring-blue-300"
+                  placeholder="Pega los datos aquí..."></textarea>
+
+        <!-- Selector de complejidad -->
+        <div class="mt-4">
+            <label class="block text-gray-700 font-semibold mb-2">
+                Complejidad del análisis
+            </label>
+
+            <select id="complexity"
+                    class="p-3 border rounded-xl focus:outline-none focus:ring focus:ring-blue-300">
+                <option value="standard">Estándar (rápido)</option>
+                <option value="complex">Complejo (Gemini Pro 2.5)</option>
+            </select>
+        </div>
+
+        <!-- Botón -->
+        <div class="mt-6">
+            <button onclick="enviarDatos()"
+                    class="bg-blue-600 text-white px-6 py-3 rounded-xl font-semibold hover:bg-blue-700">
+                Analizar con IA
+            </button>
+        </div>
+
+        <!-- Loading -->
+        <div id="loading" class="hidden mt-4 text-blue-600 font-semibold">
+            ⏳ Analizando... espera un momento...
+        </div>
+
+        <!-- Resultados -->
+        <div id="result-box"
+             class="mt-6 p-4 bg-gray-50 border rounded-xl text-gray-800 hidden">
+        </div>
+
+    </div>
+</div>
+
+<script>
+async function enviarDatos() {
+    const data = document.getElementById("data-input").value.trim();
+    const complexity = document.getElementById("complexity").value;
+    const loading = document.getElementById("loading");
+    const resultBox = document.getElementById("result-box");
+
+    if (!data) {
+        alert("Por favor ingresa datos para analizar.");
+        return;
+    }
+
+    resultBox.classList.add("hidden");
+    loading.classList.remove("hidden");
+
+    try {
+        const response = await fetch("/api/ia/analizar/", {
+            method: "POST",
+            headers: {"Content-Type": "application/json"},
+            body: JSON.stringify({
+                data: data,
+                complexity: complexity
+            })
+        });
+
+        const json = await response.json();
+
+        loading.classList.add("hidden");
+        resultBox.classList.remove("hidden");
+
+        resultBox.innerHTML = `
+            <h2 class="font-bold text-lg mb-2 text-blue-700">Resultado del análisis:</h2>
+            <p>${json.result?.replace(/\n/g, "<br>") || json.error}</p>
+        `;
+    } catch (err) {
+        loading.classList.add("hidden");
+        resultBox.classList.remove("hidden");
+        resultBox.innerHTML = "<p class='text-red-600'>❌ Error al conectar con el servidor.</p>";
+    }
+}
+</script>
+
+</body>
+</html>

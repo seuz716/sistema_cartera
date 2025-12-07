@@ -1,0 +1,18 @@
+{% extends 'base.html' %}
+{% load widget_tweaks %}
+{% block content %}
+<h2>Registrar nueva recolección</h2>
+<form method="post">
+  {% csrf_token %}
+  <div class="form-group">
+    {{ form.proveedor.label_tag }}{% render_field form.proveedor class="form-control" %}
+  </div>
+  <div class="form-group">
+    {{ form.fecha.label_tag }}{% render_field form.fecha class="form-control" %}
+  </div>
+  <div class="form-group">
+    {{ form.litros.label_tag }}{% render_field form.litros class="form-control" %}
+  </div>
+  <button type="submit" class="btn btn-success">Guardar</button>
+</form>
+{% endblock %}

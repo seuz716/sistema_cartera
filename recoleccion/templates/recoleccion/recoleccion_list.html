@@ -1,0 +1,21 @@
+{% extends 'base.html' %}
+{% block content %}
+<h2>Recolecciones registradas</h2>
+<a href="{% url 'recoleccion:crear' %}" class="btn btn-primary">Nueva recolección</a>
+<table class="table mt-3">
+  <tr>
+    <th>Fecha</th>
+    <th>Proveedor</th>
+    <th>Litros</th>
+    <th>Quincena</th>
+  </tr>
+  {% for r in recolecciones %}
+  <tr>
+    <td>{{ r.fecha }}</td>
+    <td>{{ r.proveedor.nombre }}</td>
+    <td>{{ r.litros }}</td>
+    <td>{{ r.quincena }}</td>
+  </tr>
+  {% endfor %}
+</table>
+{% endblock %}

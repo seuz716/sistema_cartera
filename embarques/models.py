@@ -43,6 +43,12 @@ class Embarque(models.Model):
     conductor = models.CharField(max_length=100)
     vehiculo = models.CharField(max_length=50, blank=True, null=True)
     placa = models.CharField(max_length=20, blank=True, null=True)
+     # PRODUCTOS ENVIADOS
+    canastillas_queso = models.PositiveIntegerField(default=0)
+    canastillas_crema = models.PositiveIntegerField(default=0)
+    canastillas_cuajada = models.PositiveIntegerField(default=0)
+    canastillas_tajado = models.PositiveIntegerField(default=0)
+    bolsas_mantequilla = models.PositiveIntegerField(default=0)
 
     creado_en = models.DateTimeField(auto_now_add=True)
     actualizado_en = models.DateTimeField(auto_now=True)
