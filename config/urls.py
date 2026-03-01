@@ -13,10 +13,12 @@ urlpatterns = [
     path('recoleccion/', include('recoleccion.urls')),
     path('proveedores/', include('proveedores.urls')),
     path('api/ia/', include('modulo_ia.urls')),
+    path('api-auth/', include('rest_framework.urls')),
+    path('accounts/', include('django.contrib.auth.urls')),
 
 
-    # path('ventas/', include('ventas.urls', namespace='ventas')),
-    # path('cartera/', include('cartera.urls', namespace='cartera')),
+    path('ventas/', include('ventas.urls', namespace='ventas')),
+    path('cartera/', include('cartera.urls', namespace='cartera')),
 ]
 
 if settings.DEBUG:

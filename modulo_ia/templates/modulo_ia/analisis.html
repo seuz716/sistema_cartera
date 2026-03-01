@@ -1,108 +1,164 @@
-<!DOCTYPE html>
-<html lang="es">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Panel de Análisis – Raya al Piso IA</title>
+{% extends 'base.html' %}
 
-    <script src="https://cdn.tailwindcss.com"></script>
+{% block title %}Análisis de Cartera IA - CarteraPro{% endblock %}
 
-</head>
-<body class="bg-gray-100">
+{% block extra_css %}
+<style>
+    .analysis-card {
+        background: #ffffff;
+        border-radius: 20px;
+        box-shadow: 0 10px 30px rgba(0, 0, 0, 0.05);
+        border: 1px solid #edf2f7;
+    }
 
-<div class="max-w-4xl mx-auto mt-10">
+    .textarea-custom {
+        border-radius: 12px;
+        border: 1.5px solid #e2e8f0;
+        background: #f8fafc;
+        padding: 1.2rem;
+        font-family: 'Inter', sans-serif;
+        font-size: 1.05rem;
+        transition: all 0.2s;
+    }
 
-    <h1 class="text-3xl font-bold text-center text-blue-700 mb-6">
-        📊 Panel de Análisis – Raya al Piso IA
-    </h1>
+    .textarea-custom:focus {
+        background: #fff;
+        border-color: var(--secondary-color);
+        box-shadow: 0 0 0 4px rgba(59, 130, 246, 0.1);
+    }
 
-    <!-- Tarjeta principal -->
-    <div class="bg-white shadow-xl rounded-xl p-6 border">
+    .result-box {
+        display: none;
+        background: #fff;
+        border-radius: 15px;
+        border-left: 5px solid var(--secondary-color);
+        padding: 2rem;
+        margin-top: 2rem;
+        box-shadow: 0 4px 15px rgba(0, 0, 0, 0.03);
+    }
 
-        <!-- Campo de datos -->
-        <label class="block text-gray-700 font-semibold mb-2">
-            Datos a analizar (texto, JSON, listas, cartera, proveedores...)
-        </label>
+    .complexity-badge {
+        font-size: 0.8rem;
+        padding: 0.4rem 1rem;
+        border-radius: 30px;
+        background: #e0f2fe;
+        color: #0369a1;
+        font-weight: 600;
+    }
+</style>
+{% endblock %}
 
-        <textarea id="data-input"
-                  class="w-full h-56 p-4 border rounded-xl focus:outline-none focus:ring focus:ring-blue-300"
-                  placeholder="Pega los datos aquí..."></textarea>
-
-        <!-- Selector de complejidad -->
-        <div class="mt-4">
-            <label class="block text-gray-700 font-semibold mb-2">
-                Complejidad del análisis
-            </label>
-
-            <select id="complexity"
-                    class="p-3 border rounded-xl focus:outline-none focus:ring focus:ring-blue-300">
-                <option value="standard">Estándar (rápido)</option>
-                <option value="complex">Complejo (Gemini Pro 2.5)</option>
-            </select>
+{% block content %}
+<div class="row justify-content-center">
+    <div class="col-lg-10">
+        <div class="d-flex align-items-center justify-content-between mb-4">
+            <div>
+                <h2 class="fw-bold m-0 text-primary">
+                    <i class="bi bi-graph-up-arrow me-2"></i> Análisis Inteligente de Cartera
+                </h2>
+                <p class="text-muted m-0">Inyecta datos comerciales y recibe sugerencias estratégicas.</p>
+            </div>
         </div>
 
-        <!-- Botón -->
-        <div class="mt-6">
-            <button onclick="enviarDatos()"
-                    class="bg-blue-600 text-white px-6 py-3 rounded-xl font-semibold hover:bg-blue-700">
-                Analizar con IA
-            </button>
-        </div>
+        <div class="analysis-card p-5">
+            <div class="mb-4">
+                <label class="form-label fw-bold mb-3 d-flex align-items-center text-dark">
+                    <i class="bi bi-file-earmark-text me-2 text-primary"></i> Datos a analizar
+                    <span class="ms-2 badge bg-light text-muted border fw-normal" style="font-size: 0.7rem;">JSON,
+                        Texto, Listas</span>
+                </label>
+                <textarea id="data-input" class="form-control textarea-custom mb-4" rows="10"
+                    placeholder="Pega aquí los datos de facturas, clientes o proveedores..."></textarea>
+            </div>
 
-        <!-- Loading -->
-        <div id="loading" class="hidden mt-4 text-blue-600 font-semibold">
-            ⏳ Analizando... espera un momento...
-        </div>
+            <div class="row align-items-center g-4">
+                <div class="col-md-6">
+                    <label class="form-label fw-semibold text-dark mb-2">
+                        <i class="bi bi-cpu me-2"></i> Profundidad del análisis
+                    </label>
+                    <select id="complexity"
+                        class="form-select form-select-lg rounded-pill border-light-subtle shadow-sm px-4">
+                        <option value="standard" selected>Análisis Estándar (Rápido)</option>
+                        <option value="complex">Análisis Complejo (Flash Thinkinglite)</option>
+                    </select>
+                </div>
+                <div class="col-md-6 d-grid pt-lg-4">
+                    <button id="analyze-btn" onclick="enviarDatos()"
+                        class="btn btn-primary btn-lg rounded-pill py-3 shadow">
+                        <i class="bi bi-lightning-charge-fill me-2"></i> Iniciar Análisis con IA
+                    </button>
+                </div>
+            </div>
 
-        <!-- Resultados -->
-        <div id="result-box"
-             class="mt-6 p-4 bg-gray-50 border rounded-xl text-gray-800 hidden">
-        </div>
+            <!-- Preloader -->
+            <div id="loading" class="text-center py-5 d-none">
+                <div class="spinner-grow text-primary" role="status"></div>
+                <div class="mt-3 fw-semibold text-primary">Generando reporte estratégico...</div>
+            </div>
 
+            <!-- Result -->
+            <div id="result-box" class="result-box">
+                <div class="d-flex align-items-center mb-3">
+                    <h4 class="fw-bold m-0 text-dark">
+                        <i class="bi bi-check-circle-fill text-success me-2"></i> Reporte Concluido
+                    </h4>
+                </div>
+                <div id="result-content" class="lh-lg text-secondary"></div>
+            </div>
+        </div>
     </div>
 </div>
+{% endblock %}
 
+{% block extra_js %}
 <script>
-async function enviarDatos() {
-    const data = document.getElementById("data-input").value.trim();
-    const complexity = document.getElementById("complexity").value;
-    const loading = document.getElementById("loading");
-    const resultBox = document.getElementById("result-box");
+    async function enviarDatos() {
+        const dataInput = document.getElementById("data-input").value.trim();
+        const complexity = document.getElementById("complexity").value;
+        const loading = document.getElementById("loading");
+        const resultBox = document.getElementById("result-box");
+        const resultContent = document.getElementById("result-content");
+        const analyzeBtn = document.getElementById("analyze-btn");
 
-    if (!data) {
-        alert("Por favor ingresa datos para analizar.");
-        return;
+        if (!dataInput) {
+            alert("Por favor ingresa datos para analizar.");
+            return;
+        }
+
+        resultBox.style.display = "none";
+        loading.classList.remove("d-none");
+        analyzeBtn.disabled = true;
+
+        try {
+            const response = await fetch("{% url 'ia_analizar' %}", {
+                method: "POST",
+                headers: {
+                    "Content-Type": "application/json",
+                    "X-CSRFToken": "{{ csrf_token }}"
+                },
+                body: JSON.stringify({
+                    data: dataInput,
+                    complexity: complexity
+                })
+            });
+
+            const json = await response.json();
+
+            loading.classList.add("d-none");
+            analyzeBtn.disabled = false;
+            resultBox.style.display = "block";
+
+            if (json.result) {
+                resultContent.innerHTML = json.result.replace(/\n/g, "<br>");
+            } else {
+                resultContent.innerHTML = "<span class='text-danger'>❌ Error: " + (json.error || "No se pudo procesar.") + "</span>";
+            }
+        } catch (err) {
+            loading.classList.add("d-none");
+            analyzeBtn.disabled = false;
+            resultBox.style.display = "block";
+            resultContent.innerHTML = "<p class='text-red-600'>❌ Error al conectar con el servidor.</p>";
+        }
     }
-
-    resultBox.classList.add("hidden");
-    loading.classList.remove("hidden");
-
-    try {
-        const response = await fetch("/api/ia/analizar/", {
-            method: "POST",
-            headers: {"Content-Type": "application/json"},
-            body: JSON.stringify({
-                data: data,
-                complexity: complexity
-            })
-        });
-
-        const json = await response.json();
-
-        loading.classList.add("hidden");
-        resultBox.classList.remove("hidden");
-
-        resultBox.innerHTML = `
-            <h2 class="font-bold text-lg mb-2 text-blue-700">Resultado del análisis:</h2>
-            <p>${json.result?.replace(/\n/g, "<br>") || json.error}</p>
-        `;
-    } catch (err) {
-        loading.classList.add("hidden");
-        resultBox.classList.remove("hidden");
-        resultBox.innerHTML = "<p class='text-red-600'>❌ Error al conectar con el servidor.</p>";
-    }
-}
 </script>
-
-</body>
-</html>
+{% endblock %}

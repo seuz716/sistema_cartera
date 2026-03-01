@@ -39,5 +39,5 @@ def test_cartera_url_included():
 @pytest.mark.django_db
 def test_api_auth_url_included():
     # rest_framework.urls provides a login view at /api-auth/login/
-    url = reverse('login')
+    url = reverse('rest_framework:login')
     assert url.startswith('/api-auth/')

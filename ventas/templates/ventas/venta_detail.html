@@ -1,0 +1,157 @@
+{% extends 'base.html' %}
+
+{% block title %}Factura {{ object.factura }} - CarteraPro{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center">
+    <div class="col-lg-10">
+        <!-- Action Header -->
+        <div class="d-flex align-items-center justify-content-between mb-4 no-print">
+            <h2 class="fw-bold mb-0 text-primary">
+                Detalle de Factura <span class="text-muted">#{{ object.factura }}</span>
+            </h2>
+            <div class="d-flex gap-2">
+                <button onclick="window.print()" class="btn btn-outline-info rounded-pill px-4">
+                    <i class="bi bi-printer me-1"></i> Imprimir
+                </button>
+                <a href="{% url 'ventas:lista' %}" class="btn btn-outline-secondary rounded-pill px-4">
+                    <i class="bi bi-arrow-left me-1"></i> Regresar
+                </a>
+            </div>
+        </div>
+
+        <!-- Invoice Body -->
+        <div class="glass-card shadow-lg p-5 border-0 bg-white" id="invoice">
+            <div class="row mb-5 pb-3 border-bottom">
+                <div class="col-6">
+                    <h3 class="fw-bold text-primary mb-1">CARTERA PRO</h3>
+                    <p class="text-muted small">Sistema de Gestión de Cartera y Ventas</p>
+                    <div class="mt-4">
+                        <h6 class="text-uppercase fw-bold text-muted small mb-3">Facturado a:</h6>
+                        <h4 class="fw-bold mb-1">{{ object.cliente.nombre }} {{ object.cliente.apellido }}</h4>
+                        <p class="mb-0 text-muted">{{ object.cliente.numero_identificacion }}</p>
+                        <p class="mb-1 text-muted">{{ object.cliente.direccion }}</p>
+                        <p class="mb-0 text-muted">{{ object.cliente.email }} | {{ object.cliente.telefono }}</p>
+                    </div>
+                </div>
+                <div class="col-6 text-end">
+                    <div class="p-3 bg-light rounded-4 d-inline-block shadow-sm">
+                        <h6 class="text-uppercase fw-bold text-muted small mb-1">Fecha Emisión:</h6>
+                        <h5 class="fw-bold mb-3">{{ object.fecha|date:"d M, Y" }}</h5>
+
+                        <h6 class="text-uppercase fw-bold text-muted small mb-1">Total Factura:</h6>
+                        <h3 class="fw-bold text-primary mb-0">${{ object.total_con_flete }}</h3>
+                    </div>
+                    <div class="mt-4">
+                        <span
+                            class="badge {% if object.estado == 'DEBE' %}bg-danger{% elif object.estado == 'PARCIAL' %}bg-warning{% else %}bg-success{% endif %} fs-6 px-4 py-2 rounded-pill">
+                            {{ object.get_estado_display }}
+                        </span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Items Table -->
+            <table class="table table-borderless table-striped-columns align-middle">
+                <thead class="bg-light border-bottom">
+                    <tr class="text-muted small text-uppercase">
+                        <th class="ps-3 py-3">Descripción / Artículo</th>
+                        <th class="py-3 text-center">Cantidad</th>
+                        <th class="py-3 text-end">P. Unitario</th>
+                        <th class="py-3 text-end pe-3">Subtotal</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for item in object.detalles.all %}
+                    <tr class="border-bottom">
+                        <td class="ps-3 py-3">
+                            <div class="fw-bold text-dark">{{ item.producto.nombre }}</div>
+                            <div class="x-small text-muted">{{ item.producto.descripcion|truncatechars:50 }}</div>
+                        </td>
+                        <td class="text-center">{{ item.cantidad }} <span class="text-muted fs-7">{{
+                                item.producto.unidad_medida }}</span></td>
+                        <td class="text-end">${{ item.precio_unitario }}</td>
+                        <td class="text-end fw-bold pe-3">${{ item.precio_total }}</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+
+            <!-- Financial Summary -->
+            <div class="row justify-content-end mt-5">
+                <div class="col-md-5">
+                    <table class="table table-sm table-borderless">
+                        <tr>
+                            <td class="text-muted">Subtotal items:</td>
+                            <td class="text-end fw-semibold">${{ object.subtotal }}</td>
+                        </tr>
+                        {% if object.flete > 0 %}
+                        <tr>
+                            <td class="text-muted">Flete de Transporte (+):</td>
+                            <td class="text-end fw-semibold">${{ object.flete }}</td>
+                        </tr>
+                        {% endif %}
+                        {% if object.descuentos > 0 %}
+                        <tr>
+                            <td class="text-muted text-danger">Descuentos registrados (-):</td>
+                            <td class="text-end text-danger fw-semibold">-${{ object.descuentos }}</td>
+                        </tr>
+                        {% endif %}
+                        <tr class="border-top">
+                            <td class="fw-bold fs-5 pt-3">TOTAL FACTURA:</td>
+                            <td class="text-end fw-bold fs-5 pt-3 text-primary">${{ object.total_con_flete }}</td>
+                        </tr>
+                        <tr class="bg-light-subtle">
+                            <td class="text-success pt-3">Abonado a la fecha (-):</td>
+                            <td class="text-end text-success fw-bold pt-3">-${{ object.abono }}</td>
+                        </tr>
+                        <tr>
+                            <td class="fw-bold fs-4 pt-4 border-top">SALDO PENDIENTE:</td>
+                            <td class="text-end fw-bold fs-4 pt-4 border-top text-danger">${{ object.saldo }}</td>
+                        </tr>
+                    </table>
+                </div>
+            </div>
+
+            <!-- Notes -->
+            {% if object.notas %}
+            <div class="mt-5 p-3 bg-light rounded-3">
+                <h6 class="fw-bold x-small text-uppercase text-muted border-bottom pb-2 mb-2">Comentarios / Notas
+                    Externas</h6>
+                <p class="mb-0 small">{{ object.notas }}</p>
+            </div>
+            {% endif %}
+
+            <div class="mt-5 pt-5 text-center text-muted border-top">
+                <p class="small">Esta factura fue generada digitalmente a través de CarteraPro. <br> <strong>Sistema de
+                        Cartera y Logística</strong></p>
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+    @media print {
+        .no-print {
+            display: none !important;
+        }
+
+        .glass-card {
+            box-shadow: none !important;
+            border: 1px solid #ddd !important;
+        }
+
+        body {
+            background: white !important;
+        }
+    }
+
+    .x-small {
+        font-size: 0.85rem;
+    }
+
+    .fs-7 {
+        font-size: 0.75rem;
+    }
+</style>
+{% endblock %}

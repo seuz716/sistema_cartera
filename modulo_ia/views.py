@@ -1,8 +1,10 @@
+from django.contrib.auth.mixins import LoginRequiredMixin
+from django.contrib.auth.decorators import login_required
 from django.http import JsonResponse
 from django.shortcuts import render
 from django.views import View
-from django.views.decorators.csrf import csrf_exempt
-from django.utils.decorators import method_decorator
+# from django.views.decorators.csrf import csrf_exempt  # Eliminado por seguridad
+# from django.utils.decorators import method_decorator
 
 # REST Framework imports (faltaban)
 from rest_framework.views import APIView
@@ -18,20 +20,29 @@ from google import genai
 from .gemini_service import GeminiAIService
 
 # Importar token manager
-from .token_manager import count_tokens, can_use, remaining_tokens, register_tokens
+from .token_manager import count_tokens, can_use, remaining_tokens, register_tokens, smart_truncate
 
-# Inicializar cliente Gemini
-genai_client = genai.Client(api_key=os.environ.get("GEMINI_API_KEY"))
+# El cliente se inicializa preferiblemente a través de GeminiAIService o con entorno seguro
+GEMINI_KEY = os.getenv("GEMINI_API_KEY")
+genai_client = None
+
+if GEMINI_KEY:
+    try:
+        genai_client = genai.Client(api_key=GEMINI_KEY)
+    except Exception:
+        genai_client = None
 
 
 # -----------------------------------------
 #         RENDERS DEL FRONTEND
 # -----------------------------------------
 
+@login_required
 def panel_analisis(request):
     return render(request, "modulo_ia/analisis.html")
 
 
+@login_required
 def chat_frontend(request):
     return render(request, "modulo_ia/chat.html")
 
@@ -40,9 +51,10 @@ def chat_frontend(request):
 #     VISTA PARA ANALIZAR DATOS
 # -----------------------------------------
 
-@method_decorator(csrf_exempt, name='dispatch')
-class AnalizarDatosView(View):
-
+class AnalizarDatosView(LoginRequiredMixin, View):
+    """
+    Vista funcional para analizar datos usando JSON estándar.
+    """
     def post(self, request):
         try:
             body = json.loads(request.body)
@@ -52,7 +64,7 @@ class AnalizarDatosView(View):
             ai = GeminiAIService()
             result = ai.analyze_data(data_context, complexity)
 
-            return JsonResponse({"result": result}, status=200)
+            return JsonResponse({"result": result})
 
         except Exception as e:
             return JsonResponse({"error": str(e)}, status=500)
@@ -62,38 +74,49 @@ class AnalizarDatosView(View):
 #     CHAT IA CON CONTROL DE TOKENS
 # -----------------------------------------
 
-@method_decorator(csrf_exempt, name='dispatch')
-class ChatIAView(APIView):
-
+class ChatIAView(LoginRequiredMixin, View):
+    """
+    Chat interactivo con control de tokens y respuesta en tiempo real.
+    """
     def post(self, request):
-        msg = request.data.get("message", "")
-
-        # ---- Control de tokens ----
-        tokens_needed = count_tokens(msg)
-
-        if not can_use(tokens_needed):
-            return Response({
-                "error": "Límite diario de tokens alcanzado.",
-                "remaining": remaining_tokens(),
-                "msg": "Intenta mañana, bebé 💙"
-            }, status=status.HTTP_429_TOO_MANY_REQUESTS)
-
         try:
-            # Registrar consumo del input
-            register_tokens(tokens_needed)
+            body = json.loads(request.body)
+            msg = body.get("message", "")
+            
+            ai = GeminiAIService()
+            # Si no hay cliente, devolvemos error amigable
+            if not ai.client:
+                return JsonResponse({
+                    "error": "Servicio de IA no disponible: GEMINI_API_KEY no configurada en el archivo .env"
+                }, status=500)
 
-            response = genai_client.models.generate_content(
-                model="gemini-2.5-flash",
+            # ---- Truncado inteligente si es muy largo ----
+            msg = smart_truncate(msg, max_tokens=2000, client=ai.client)
+
+            # ---- Control de tokens reales ----
+            tokens_needed = count_tokens(msg, client=ai.client)
+
+            if not can_use(tokens_needed):
+                return JsonResponse({
+                    "error": "Límite diario de tokens alcanzado.",
+                    "remaining": remaining_tokens()
+                }, status=429)
+
+            # Registrar consumo del input
+            register_tokens(tokens_needed, method="real")
+
+            response = ai.client.models.generate_content(
+                model="gemini-2.0-flash",
                 contents=msg
             )
 
             reply = response.text
-            output_tokens = count_tokens(reply)
+            output_tokens = count_tokens(reply, client=ai.client)
 
             # Registrar tokens generados por IA
-            register_tokens(output_tokens)
+            register_tokens(output_tokens, method="real")
 
-            return Response({"reply": reply})
+            return JsonResponse({"reply": reply})
 
         except Exception as e:
-            return Response({"error": str(e)}, status=500)
+            return JsonResponse({"error": f"Error inesperado: {str(e)}"}, status=500)

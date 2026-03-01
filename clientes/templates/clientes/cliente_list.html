@@ -1,53 +1,132 @@
-{% extends 'base.html' %}
+{% extends "base.html" %}
+
+{% block title %}Gestión de Clientes - CarteraPro{% endblock %}
 
 {% block content %}
-<div class="d-flex justify-content-between align-items-center mb-3">
-    <h1 class="h3">📋 Lista de Clientes</h1>
-    <a href="{% url 'clientes:cliente_create' %}" class="btn btn-success">
-        ➕ Nuevo Cliente
-    </a>
+<div class="row align-items-center mb-4">
+    <div class="col-md-6">
+        <h2 class="fw-bold text-primary mb-1">
+            <i class="bi bi-people-fill me-2"></i>Directorio de Clientes
+        </h2>
+        <p class="text-muted mb-0">Administre su cartera de clientes y relaciones comerciales.</p>
+    </div>
+    <div class="col-md-6 text-md-end mt-3 mt-md-0">
+        <a href="{% url "clientes:cliente_create" %}" class="btn btn-primary px-4 shadow-sm border-0">
+            <i class="bi bi-person-plus-fill me-1"></i> Nuevo Registro
+        </a>
+    </div>
 </div>
 
-<p class="text-muted">Aquí puedes gestionar los clientes registrados en el sistema.</p>
-
-<div class="table-responsive">
-    <table class="table table-hover table-striped align-middle">
-        <thead class="table-dark">
-            <tr>
-                <th>ID</th>
-                <th>Nombre</th>
-                <th>Email</th>
-                <th class="text-center">Acciones</th>
-            </tr>
-        </thead>
-        <tbody>
-            {% for cliente in clientes %}
-            <tr>
-                <td>{{ cliente.id }}</td>
-                <td><strong>{{ cliente.nombre }}</strong></td>
-                <td>
-                    <span class="badge bg-primary">{{ cliente.email }}</span>
-                </td>
-                <td class="text-center">
-                    <a href="{% url 'clientes:cliente_detail' cliente.pk %}" class="btn btn-info btn-sm me-1">
-                        👁 Ver
-                    </a>
-                    <a href="{% url 'clientes:cliente_update' cliente.pk %}" class="btn btn-warning btn-sm me-1">
-                        ✏ Editar
-                    </a>
-                    <a href="{% url 'clientes:cliente_delete' cliente.pk %}" class="btn btn-danger btn-sm">
-                        🗑 Eliminar
-                    </a>
-                </td>
-            </tr>
-            {% empty %}
-            <tr>
-                <td colspan="4" class="text-center text-muted py-4">
-                    🚫 No hay clientes registrados todavía.
-                </td>
-            </tr>
-            {% endfor %}
-        </tbody>
-    </table>
+<div class="row g-3 mb-4">
+    <div class="col-md-4">
+        <div class="glass-card p-3 border-start border-4 border-info">
+            <div class="d-flex align-items-center">
+                <div class="bg-info bg-opacity-10 p-2 rounded-3 me-3">
+                    <i class="bi bi-person-check fs-4 text-info"></i>
+                </div>
+                <div>
+                    <h6 class="text-muted small mb-1">Total Clientes</h6>
+                    <h4 class="fw-bold mb-0">{{ clientes.count|default:0 }}</h4>
+                </div>
+            </div>
+        </div>
+    </div>
 </div>
+
+<div class="glass-card border-0 overflow-hidden">
+    <div class="p-3 bg-light border-bottom d-flex align-items-center justify-content-between">
+        <h6 class="fw-bold m-0 text-dark opacity-75">Registros Recientes</h6>
+        <div class="input-group input-group-sm w-auto">
+            <span class="input-group-text bg-white border-end-0"><i class="bi bi-search"></i></span>
+            <input type="text" class="form-control border-start-0" placeholder="Buscar cliente...">
+        </div>
+    </div>
+    
+    <div class="table-responsive">
+        <table class="table table-hover align-middle mb-0">
+            <thead class="bg-light-subtle">
+                <tr>
+                    <th class="ps-4 py-3 text-muted small text-uppercase fw-bold">ID / Identificación</th>
+                    <th class="py-3 text-muted small text-uppercase fw-bold">Cliente</th>
+                    <th class="py-3 text-muted small text-uppercase fw-bold">Contacto</th>
+                    <th class="py-3 text-muted small text-uppercase fw-bold">Estado</th>
+                    <th class="py-3 text-muted small text-uppercase fw-bold text-end pe-4">Acciones</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for cliente in clientes %}
+                <tr class="border-top">
+                    <td class="ps-4">
+                        <div class="text-dark fw-bold">#{{ cliente.id }}</div>
+                        <div class="text-muted small">{{ cliente.numero_identificacion|default:"-" }}</div>
+                    </td>
+                    <td>
+                        <div class="d-flex align-items-center">
+                            <div class="avatar-circle me-3">
+                                {{ cliente.nombre|slice:":1" }}{{ cliente.apellido|slice:":1" }}
+                            </div>
+                            <div>
+                                <div class="fw-bold text-dark">{{ cliente.nombre }} {{ cliente.apellido }}</div>
+                                <div class="text-muted x-small">{{ cliente.tipo_persona|capfirst }}</div>
+                            </div>
+                        </div>
+                    </td>
+                    <td>
+                        <div class="text-dark"><i class="bi bi-envelope small me-1"></i> {{ cliente.email|default:"Sin correo" }}</div>
+                        <div class="text-muted small"><i class="bi bi-telephone small me-1"></i> {{ cliente.telefono|default:"-" }}</div>
+                    </td>
+                    <td>
+                        {% if cliente.activo %}
+                            <span class="badge bg-success-subtle text-success px-3 rounded-pill fw-bold">Activo</span>
+                        {% else %}
+                            <span class="badge bg-danger-subtle text-danger px-3 rounded-pill fw-bold">Inactivo</span>
+                        {% endif %}
+                    </td>
+                    <td class="text-end pe-4">
+                        <div class="btn-group">
+                            <a href="{% url "clientes:cliente_detail" cliente.pk %}" class="btn btn-sm btn-outline-info border-0 rounded-circle p-2" title="Ver Detalles">
+                                <i class="bi bi-eye"></i>
+                            </a>
+                            <a href="{% url "clientes:cliente_update" cliente.pk %}" class="btn btn-sm btn-outline-warning border-0 rounded-circle p-2 mx-1" title="Editar">
+                                <i class="bi bi-pencil-square"></i>
+                            </a>
+                            <a href="{% url "clientes:cliente_delete" cliente.pk %}" class="btn btn-sm btn-outline-danger border-0 rounded-circle p-2" title="Eliminar">
+                                <i class="bi bi-trash3"></i>
+                            </a>
+                        </div>
+                    </td>
+                </tr>
+                {% empty %}
+                <tr>
+                    <td colspan="5" class="text-center py-5">
+                        <div class="py-4">
+                            <i class="bi bi-search fs-1 text-muted opacity-25"></i>
+                            <h5 class="text-muted mt-3">No hay clientes registrados todavía</h5>
+                            <a href="{% url "clientes:cliente_create" %}" class="btn btn-primary mt-2">
+                                <i class="bi bi-plus-lg me-1"></i> Crear mi primer cliente
+                            </a>
+                        </div>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    
+    <div class="p-3 bg-light border-top d-flex justify-content-between align-items-center">
+        <span class="text-muted small">Mostrando {{ clientes.count|default:0 }} registros</span>
+    </div>
+</div>
+
+<style>
+    .avatar-circle {
+        width: 40px; height: 40px; background-color: var(--accent-color); color: white;
+        border-radius: 50%; display: flex; align-items: center; justify-content: center;
+        font-weight: 700; font-size: 0.85rem; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+    }
+    .x-small { font-size: 0.75rem; }
+    .bg-light-subtle { background-color: #f8fafc !important; }
+    .badge { font-size: 0.75rem; letter-spacing: 0.3px; }
+    .table-hover tbody tr:hover { background-color: rgba(59, 130, 246, 0.02) !important; }
+</style>
 {% endblock %}

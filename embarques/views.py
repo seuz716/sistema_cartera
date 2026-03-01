@@ -1,4 +1,5 @@
 from django.urls import reverse_lazy, reverse
+from django.contrib.auth.mixins import LoginRequiredMixin
 from django.views.generic import ListView, DetailView, CreateView, UpdateView, DeleteView
 from django.shortcuts import redirect, get_object_or_404
 from django.contrib import messages
@@ -9,14 +10,14 @@ from .forms import EmbarqueForm, CostoEmbarqueForm
 # ========================
 # VISTAS DE EMBARQUES
 # ========================
-class EmbarqueListView(ListView):
+class EmbarqueListView(LoginRequiredMixin, ListView):
     model = Embarque
     template_name = "embarques/embarque_list.html"
     context_object_name = "embarques"
     paginate_by = 20
 
 
-class EmbarqueDetailView(DetailView):
+class EmbarqueDetailView(LoginRequiredMixin, DetailView):
     model = Embarque
     template_name = "embarques/embarque_detail.html"
     context_object_name = "embarque"
@@ -28,7 +29,7 @@ class EmbarqueDetailView(DetailView):
         return context
 
 
-class EmbarqueCreateView(CreateView):
+class EmbarqueCreateView(LoginRequiredMixin, CreateView):
     model = Embarque
     form_class = EmbarqueForm
     template_name = "embarques/embarque_form.html"
@@ -48,7 +49,7 @@ class EmbarqueCreateView(CreateView):
         return reverse("embarques:detalle", args=[self.object.pk])
 
 
-class EmbarqueUpdateView(UpdateView):
+class EmbarqueUpdateView(LoginRequiredMixin, UpdateView):
     model = Embarque
     form_class = EmbarqueForm
     template_name = "embarques/embarque_form.html"
@@ -58,7 +59,7 @@ class EmbarqueUpdateView(UpdateView):
         return reverse("embarques:detalle", args=[self.object.pk])
 
 
-class EmbarqueDeleteView(DeleteView):
+class EmbarqueDeleteView(LoginRequiredMixin, DeleteView):
     model = Embarque
     template_name = "embarques/embarque_confirm_delete.html"
     success_url = reverse_lazy("embarques:lista")
@@ -110,15 +111,15 @@ class CostoMixin:
 # ========================
 # VISTAS DE COSTOS
 # ========================
-class CostoCrearView(CostoMixin, CreateView):
+class CostoCrearView(LoginRequiredMixin, CostoMixin, CreateView):
     pass
 
 
-class CostoUpdateView(CostoMixin, UpdateView):
+class CostoUpdateView(LoginRequiredMixin, CostoMixin, UpdateView):
     pass
 
 
-class CostoDeleteView(DeleteView):
+class CostoDeleteView(LoginRequiredMixin, DeleteView):
     model = CostoEmbarque
     template_name = "embarques/costo_confirm_delete.html"
 

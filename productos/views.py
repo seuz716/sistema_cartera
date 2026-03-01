@@ -1,3 +1,4 @@
+from django.contrib.auth.mixins import LoginRequiredMixin
 from django.shortcuts import render, get_object_or_404, redirect
 from django.views import View
 from django.views.generic import ListView, CreateView, UpdateView, DeleteView
@@ -9,7 +10,7 @@ from .forms import ProductoForm
 
 
 # ✅ Listado de productos
-class ProductoListView(ListView):
+class ProductoListView(LoginRequiredMixin, ListView):
     model = Producto
     template_name = "productos/producto_list.html"
     context_object_name = "productos"
@@ -21,7 +22,7 @@ class ProductoListView(ListView):
 
 
 # ✅ Crear nuevo producto
-class ProductoCreateView(CreateView):
+class ProductoCreateView(LoginRequiredMixin, CreateView):
     model = Producto
     form_class = ProductoForm
     template_name = "productos/producto_form.html"
@@ -38,7 +39,7 @@ class ProductoCreateView(CreateView):
 
 
 # ✅ Editar producto
-class ProductoUpdateView(UpdateView):
+class ProductoUpdateView(LoginRequiredMixin, UpdateView):
     model = Producto
     form_class = ProductoForm
     template_name = "productos/producto_form.html"
@@ -54,7 +55,7 @@ class ProductoUpdateView(UpdateView):
 
 
 # ✅ Eliminar producto
-class ProductoDeleteView(DeleteView):
+class ProductoDeleteView(LoginRequiredMixin, DeleteView):
     model = Producto
     template_name = "productos/producto_confirm_delete.html"
     success_url = reverse_lazy("productos:lista")
