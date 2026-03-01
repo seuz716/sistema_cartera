@@ -45,25 +45,47 @@ class Venta(models.Model):
 
     def actualizar_totales(self) -> None:
         """
-        Recalcula subtotal, total y saldo a partir de los detalles relacionados
-        y actualiza el estado de la factura (DEBE, PARCIAL, PAGADA).
+        Recalcula subtotal, total, abono y saldo a partir de los detalles y pagos
+        relacionados, actualizando el estado de la factura (DEBE, PARCIAL, PAGADA).
+        Usa select_for_update para prevenir race conditions.
         """
-        detalles = self.detalles.all()
+        # 1. Bloqueo de fila para evitar que otro proceso pise el saldo
+        # Refrescamos desde la DB para tener valores exactos
+        venta = Venta.objects.select_for_update().get(pk=self.pk)
+
+        # 2. Totales de productos
+        detalles = venta.detalles.all()
         subtotal = sum(det.precio_total for det in detalles)
-        self.subtotal = subtotal
-        self.total = subtotal - self.descuentos
-        self.total_con_flete = self.total + self.flete
-        # El saldo se calcula restando los abonos registrados
-        self.saldo = self.total_con_flete - self.abono
+        venta.subtotal = subtotal
+        venta.total = subtotal - venta.descuentos
+        venta.total_con_flete = venta.total - venta.flete
+
+        # 3. Recalcular Abonos
+        pagos = venta.pagos.all()
+        venta.abono = sum(pago.monto for pago in pagos)
+
+        # 4. Calcular Saldo Final
+        venta.saldo = venta.total_con_flete - venta.abono
         
-        if self.saldo <= 0:
-            self.estado = "PAGADA"
-        elif self.abono > 0:
-            self.estado = "PARCIAL"
-        else:
-            self.estado = "DEBE"
+        # Guard clause: No sobreescribir si la factura está ANULADA
+        if venta.estado != "ANULADA":
+            if venta.saldo <= 0:
+                venta.estado = "PAGADA"
+            elif venta.abono > 0:
+                venta.estado = "PARCIAL"
+            else:
+                venta.estado = "DEBE"
             
-        self.save()
+        # 5. Guardar cambios
+        venta.save()
+        
+        # 6. Sincronizar el objeto actual en memoria por si acaso
+        self.subtotal = venta.subtotal
+        self.total = venta.total
+        self.total_con_flete = venta.total_con_flete
+        self.abono = venta.abono
+        self.saldo = venta.saldo
+        self.estado = venta.estado
 
 
 class DetalleVenta(models.Model):

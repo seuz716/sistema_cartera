@@ -35,6 +35,17 @@ class Cliente(models.Model):
     saldo = models.DecimalField(max_digits=12, decimal_places=2, default=0)
     activo = models.BooleanField(default=True)
 
+    def recalcular_saldo(self):
+        """
+        Suma el saldo de todas las ventas asociadas que no estén anuladas.
+        """
+        from ventas.models import Venta
+        total_deuda = self.ventas.exclude(estado='ANULADA').aggregate(
+            total=models.Sum('saldo')
+        )['total'] or 0
+        self.saldo = total_deuda
+        self.save()
+
     def nombre_completo(self):
         return f"{self.nombre} {self.apellido}"
 

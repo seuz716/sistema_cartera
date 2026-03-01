@@ -1,5 +1,4 @@
 {% extends 'base.html' %}
-{% load widget_tweaks %}
 
 {% block title %}Generar Factura - CarteraPro{% endblock %}
 
@@ -30,32 +29,27 @@
 
                         <div class="mb-3">
                             <label class="form-label fw-semibold small">N° Factura (Visible)</label>
-                            {% render_field form.factura class="form-control form-control-lg rounded-3
-                            border-light-subtle shadow-sm" placeholder="Ej: F-001" %}
+                            {{ form.factura }}
                         </div>
 
                         <div class="mb-3">
                             <label class="form-label fw-semibold small">Cliente</label>
-                            {% render_field form.cliente class="form-select form-select-lg rounded-3 border-light-subtle
-                            shadow-sm" %}
+                            {{ form.cliente }}
                         </div>
 
                         <div class="mb-3">
                             <label class="form-label fw-semibold small">Fecha Emisión</label>
-                            {% render_field form.fecha class="form-control form-control-lg rounded-3 border-light-subtle
-                            shadow-sm" %}
+                            {{ form.fecha }}
                         </div>
 
                         <div class="mb-3">
                             <label class="form-label fw-semibold small">Embarque / Ruta</label>
-                            {% render_field form.embarque class="form-control rounded-3 border-light-subtle shadow-sm"
-                            %}
+                            {{ form.embarque }}
                         </div>
 
                         <div class="mb-3">
                             <label class="form-label fw-semibold small">Conductor</label>
-                            {% render_field form.conductor class="form-control rounded-3 border-light-subtle shadow-sm"
-                            %}
+                            {{ form.conductor }}
                         </div>
                     </div>
                 </div>
@@ -82,16 +76,13 @@
                                     {% for det_form in formset %}
                                     <tr class="formset-row">
                                         <td>
-                                            {% render_field det_form.producto class="form-select rounded-3
-                                            border-light-subtle shadow-sm" %}
+                                            {{ det_form.producto }}
                                         </td>
                                         <td>
-                                            {% render_field det_form.cantidad class="form-control rounded-3
-                                            border-light-subtle shadow-sm text-center" placeholder="0.00" %}
+                                            {{ det_form.cantidad }}
                                         </td>
                                         <td>
-                                            {% render_field det_form.precio_unitario class="form-control rounded-3
-                                            border-light-subtle shadow-sm text-end" placeholder="0.00" %}
+                                            {{ det_form.precio_unitario }}
                                         </td>
                                         <td class="text-end fw-bold text-dark">
                                             <span class="row-total">$0.00</span>
@@ -119,14 +110,12 @@
                             <div class="col-md-6">
                                 <div class="p-3 bg-light rounded-4 shadow-sm">
                                     <div class="d-flex justify-content-between mb-2">
-                                        <span class="text-muted">Flete Transporte (+):</span>
-                                        {% render_field form.flete class="form-control form-control-sm text-end w-50
-                                        border-0 bg-transparent fw-bold" %}
+                                        <span class="text-muted">Flete Transporte (-):</span>
+                                        {{ form.flete }}
                                     </div>
                                     <div class="d-flex justify-content-between mb-3 border-bottom pb-2">
                                         <span class="text-muted">Descuento Global (-):</span>
-                                        {% render_field form.descuentos class="form-control form-control-sm text-end
-                                        w-50 border-0 bg-transparent fw-bold text-danger" %}
+                                        {{ form.descuentos }}
                                     </div>
                                     <div class="d-flex justify-content-between align-items-center">
                                         <h5 class="fw-bold m-0">Total a Facturar:</h5>
@@ -147,7 +136,7 @@
 
             <div class="mt-4 bg-white p-4 rounded-4 shadow-sm">
                 <label class="form-label fw-bold">Notas adicionales</label>
-                {% render_field form.notas class="form-control border-light-subtle shadow-sm" rows="3" %}
+                {{ form.notas }}
             </div>
         </form>
     </div>
@@ -174,14 +163,14 @@
                     const rowSum = (parseFloat(qtyInput.value) || 0) * (parseFloat(priceInput.value) || 0);
                     subtotal += rowSum;
                     if (rowTotalDisplay) {
-                        rowTotalDisplay.innerText = `$${rowSum.toFixed(2)}`;
+                        rowTotalDisplay.innerText = `$${rowSum.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
                     }
                 }
             });
 
             const flete = parseFloat(fleteInput.value) || 0;
             const desc = parseFloat(descInput.value) || 0;
-            const total = subtotal + flete - desc;
+            const total = subtotal - flete - desc;
 
             finalTotalDisplay.innerText = `$${total.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
         }
@@ -189,14 +178,30 @@
         addBtn.addEventListener('click', function () {
             let rowCount = parseInt(totalForms.value);
             let firstRow = document.querySelector('.formset-row');
+            if (!firstRow) return;
+
             let newRow = firstRow.cloneNode(true);
 
-            newRow.querySelectorAll('input, select').forEach(input => {
-                input.id = input.id.replace(/-[0-9]+-/, `-${rowCount}-`);
-                input.name = input.name.replace(/-[0-9]+-/, `-${rowCount}-`);
+            newRow.querySelectorAll('input, select, textarea').forEach(input => {
+                const nameAttr = input.getAttribute('name');
+                if (nameAttr) {
+                    input.setAttribute('name', nameAttr.replace(/-[0-9]+-/, `-${rowCount}-`));
+                }
+                const idAttr = input.getAttribute('id');
+                if (idAttr) {
+                    input.setAttribute('id', idAttr.replace(/-[0-9]+-/, `-${rowCount}-`));
+                }
+
                 input.value = '';
+                if (input.tagName === 'SELECT') input.selectedIndex = 0;
                 input.addEventListener('input', calculateGrandTotal);
             });
+
+            const deleteInput = newRow.querySelector('[name$="-DELETE"]');
+            if (deleteInput) deleteInput.remove();
+
+            const rowTotal = newRow.querySelector('.row-total');
+            if (rowTotal) rowTotal.innerText = '$0.00';
 
             container.appendChild(newRow);
             totalForms.value = rowCount + 1;
@@ -209,14 +214,11 @@
                 if (rows.length > 1) {
                     e.target.closest('.formset-row').remove();
                     calculateGrandTotal();
-                    // Note: Django formsets usually expect sequential IDs if possible, 
-                    // but for creation usually TOTAL_FORMS is key. 
                 }
             }
         });
 
-        // initial listeners
-        document.querySelectorAll('.formset-row input, [name="flete"], [name="descuentos"]').forEach(input => {
+        document.querySelectorAll('.formset-row input, .formset-row select, [name="flete"], [name="descuentos"]').forEach(input => {
             input.addEventListener('input', calculateGrandTotal);
         });
 

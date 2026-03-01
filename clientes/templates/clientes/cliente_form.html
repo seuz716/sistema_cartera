@@ -12,9 +12,10 @@
                     <i class="bi {% if form.instance.pk %}bi-person-gear{% else %}bi-person-plus{% endif %} me-2"></i>
                     {% if form.instance.pk %}Editar Cliente{% else %}Registro de Nuevo Cliente{% endif %}
                 </h2>
-                <p class="text-muted mb-0">Complete la información detallada para mantener la integridad de la cartera.</p>
+                <p class="text-muted mb-0">Complete la información detallada para mantener la integridad de la cartera.
+                </p>
             </div>
-            <a href="{% url "clientes:cliente_list" %}" class="btn btn-outline-secondary rounded-pill px-4">
+            <a href="{% url 'clientes:cliente_list' %}" class="btn btn-outline-secondary rounded-pill px-4">
                 <i class="bi bi-arrow-left me-1"></i> Volver al listado
             </a>
         </div>
@@ -24,74 +25,81 @@
             <div class="glass-card p-4 p-md-5 shadow-sm border-0">
                 <div class="row g-4 mb-5">
                     <div class="col-12 border-bottom pb-2 mb-2">
-                        <h5 class="fw-bold text-dark m-0"><i class="bi bi-person-vcard me-2 text-primary"></i>Datos de Identificación</h5>
+                        <h5 class="fw-bold text-dark m-0"><i class="bi bi-person-vcard me-2 text-primary"></i>Datos de
+                            Identificación</h5>
                     </div>
                     <div class="col-md-6">
                         <label class="form-label fw-semibold">Número de Identificación / RUC</label>
-                        {% render_field form.numero_identificacion class="form-control form-control-lg rounded-3 border-light-subtle shadow-sm" placeholder="Ej: 1312345678" %}
+                        {{ form.numero_identificacion }}
                     </div>
                     <div class="col-md-6">
                         <label class="form-label fw-semibold">Tipo de Persona</label>
-                        {% render_field form.tipo_persona class="form-select form-select-lg rounded-3 border-light-subtle shadow-sm" %}
+                        {{ form.tipo_persona }}
                     </div>
                 </div>
 
                 <div class="row g-4 mb-5">
                     <div class="col-12 border-bottom pb-2 mb-2">
-                        <h5 class="fw-bold text-dark m-0"><i class="bi bi-info-circle me-2 text-primary"></i>Información Personal / Razón Social</h5>
+                        <h5 class="fw-bold text-dark m-0"><i class="bi bi-info-circle me-2 text-primary"></i>Información
+                            Personal / Razón Social</h5>
                     </div>
                     <div class="col-md-6">
                         <label class="form-label fw-semibold">Nombres / Razón Social</label>
-                        {% render_field form.nombre class="form-control form-control-lg rounded-3 border-light-subtle shadow-sm" placeholder="Juan Alberto" %}
+                        {{ form.nombre }}
                     </div>
                     <div class="col-md-6">
                         <label class="form-label fw-semibold">Apellidos</label>
-                        {% render_field form.apellido class="form-control form-control-lg rounded-3 border-light-subtle shadow-sm" placeholder="Pérez García" %}
+                        {{ form.apellido }}
                     </div>
                 </div>
 
                 <div class="row g-4 mb-5">
                     <div class="col-12 border-bottom pb-2 mb-2">
-                        <h5 class="fw-bold text-dark m-0"><i class="bi bi-geo-alt me-2 text-primary"></i>Contacto y Ubicación</h5>
+                        <h5 class="fw-bold text-dark m-0"><i class="bi bi-geo-alt me-2 text-primary"></i>Contacto y
+                            Ubicación</h5>
                     </div>
                     <div class="col-md-6">
-                        <label class="form-label fw-semibold"><i class="bi bi-envelope me-1"></i> Correo Electrónico</label>
-                        {% render_field form.email class="form-control form-control-lg rounded-3 border-light-subtle shadow-sm" placeholder="correo@ejemplo.com" %}
+                        <label class="form-label fw-semibold"><i class="bi bi-envelope me-1"></i> Correo
+                            Electrónico</label>
+                        {{ form.email }}
                     </div>
                     <div class="col-md-6">
                         <label class="form-label fw-semibold"><i class="bi bi-telephone me-1"></i> Teléfono</label>
-                        {% render_field form.telefono class="form-control form-control-lg rounded-3 border-light-subtle shadow-sm" placeholder="+593 ..." %}
+                        {{ form.telefono }}
                     </div>
                     <div class="col-md-8">
                         <label class="form-label fw-semibold">Dirección Domiciliaria / Fiscal</label>
-                        {% render_field form.direccion class="form-control form-control-lg rounded-3 border-light-subtle shadow-sm" placeholder="Calle ..., Av. ..." %}
+                        {{ form.direccion }}
                     </div>
                     <div class="col-md-4">
                         <label class="form-label fw-semibold">Ciudad</label>
-                        {% render_field form.ciudad class="form-control form-control-lg rounded-3 border-light-subtle shadow-sm" placeholder="Quito, Guayaquil, etc." %}
+                        {{ form.ciudad }}
                     </div>
                 </div>
 
                 <div class="row g-4 mb-5">
                     <div class="col-12 border-bottom pb-2 mb-2">
-                        <h5 class="fw-bold text-dark m-0"><i class="bi bi-credit-card me-2 text-primary"></i>Condiciones Comerciales</h5>
+                        <h5 class="fw-bold text-dark m-0"><i class="bi bi-credit-card me-2 text-primary"></i>Condiciones
+                            Comerciales</h5>
                     </div>
                     <div class="col-md-4">
                         <label class="form-label fw-semibold">Forma de Pago</label>
-                        {% render_field form.forma_pago class="form-select form-select-lg rounded-3 border-light-subtle shadow-sm" %}
+                        {{ form.forma_pago }}
                     </div>
                     <div class="col-md-4">
                         <label class="form-label fw-semibold">Días de Crédito</label>
-                        {% render_field form.dias_credito class="form-control form-control-lg rounded-3 border-light-subtle shadow-sm" %}
+                        {{ form.dias_credito }}
                     </div>
                     <div class="col-md-4">
                         <label class="form-label fw-semibold">Saldo Inicial / Actual</label>
-                        {% render_field form.saldo class="form-control form-control-lg rounded-3 bg-light text-muted border-light-subtle shadow-sm" %}
+                        {{ form.saldo }}
                     </div>
                     <div class="col-12 mt-4">
-                        <div class="form-check form-switch p-3 border rounded-3 bg-light-subtle d-inline-block shadow-sm">
-                            {% render_field form.activo class="form-check-input ms-0" %}
-                            <label class="form-check-label fw-bold ms-2" for="{{ form.activo.id_for_label }}">Cuenta de Cliente Activa</label>
+                        <div
+                            class="form-check form-switch p-3 border rounded-3 bg-light-subtle d-inline-block shadow-sm">
+                            {{ form.activo }}
+                            <label class="form-check-label fw-bold ms-2" for="{{ form.activo.id_for_label }}">Cuenta de
+                                Cliente Activa</label>
                         </div>
                     </div>
                 </div>
@@ -111,9 +119,24 @@
 </div>
 
 <style>
-    .glass-card { border-top: 5px solid var(--secondary-color) !important; background: #ffffff !important; }
-    .form-label { font-size: 0.9rem; color: #475569; }
-    .form-control:focus, .form-select:focus { border-color: var(--secondary-color) !important; box-shadow: 0 0 0 4px rgba(59, 130, 246, 0.15) !important; }
-    .bg-light-subtle { background-color: #f8fafc !important; }
+    .glass-card {
+        border-top: 5px solid var(--secondary-color) !important;
+        background: #ffffff !important;
+    }
+
+    .form-label {
+        font-size: 0.9rem;
+        color: #475569;
+    }
+
+    .form-control:focus,
+    .form-select:focus {
+        border-color: var(--secondary-color) !important;
+        box-shadow: 0 0 0 4px rgba(59, 130, 246, 0.15) !important;
+    }
+
+    .bg-light-subtle {
+        background-color: #f8fafc !important;
+    }
 </style>
 {% endblock %}

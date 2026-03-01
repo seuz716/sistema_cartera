@@ -59,10 +59,9 @@ class AnalizarDatosView(LoginRequiredMixin, View):
         try:
             body = json.loads(request.body)
             data_context = body.get("data", "")
-            complexity = body.get("complexity", "standard")
 
             ai = GeminiAIService()
-            result = ai.analyze_data(data_context, complexity)
+            result = ai.analyze_data(data_context)
 
             return JsonResponse({"result": result})
 
@@ -105,12 +104,8 @@ class ChatIAView(LoginRequiredMixin, View):
             # Registrar consumo del input
             register_tokens(tokens_needed, method="real")
 
-            response = ai.client.models.generate_content(
-                model="gemini-2.0-flash",
-                contents=msg
-            )
+            reply = ai.chat_response(msg)
 
-            reply = response.text
             output_tokens = count_tokens(reply, client=ai.client)
 
             # Registrar tokens generados por IA

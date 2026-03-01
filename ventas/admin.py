@@ -1,3 +1,21 @@
 from django.contrib import admin
+from .models import Venta, DetalleVenta
 
-# Register your models here.
+class DetalleVentaInline(admin.TabularInline):
+    model = DetalleVenta
+    extra = 1
+
+@admin.register(Venta)
+class VentaAdmin(admin.ModelAdmin):
+    list_display = ('factura', 'cliente', 'fecha', 'total', 'saldo', 'estado')
+    list_filter = ('estado', 'fecha')
+    search_fields = ('factura', 'cliente__nombre', 'cliente__numero_identificacion')
+    inlines = [DetalleVentaInline]
+    readonly_fields = ('id_interno', 'subtotal', 'total', 'total_con_flete', 'abono', 'saldo', 'estado')
+
+@admin.register(DetalleVenta)
+class DetalleVentaAdmin(admin.ModelAdmin):
+    list_display = ('venta', 'producto', 'cantidad', 'precio_unitario', 'precio_total')
+    list_filter = ('producto',)
+    search_fields = ('venta__factura', 'producto__nombre')
+    readonly_fields = ('precio_total',)

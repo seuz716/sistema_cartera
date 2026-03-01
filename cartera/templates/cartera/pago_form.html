@@ -1,5 +1,4 @@
 {% extends 'base.html' %}
-{% load widget_tweaks %}
 
 {% block title %}Registrar Pago - CarteraPro{% endblock %}
 
@@ -24,42 +23,38 @@
             <div class="glass-card p-4 p-md-5 shadow-sm border-0 bg-white">
                 <div class="mb-4">
                     <label class="form-label fw-bold">Factura de Venta</label>
-                    {% render_field form.venta class="form-select form-select-lg rounded-3 border-light-subtle
-                    shadow-sm" %}
+                    {{ form.venta }}
                 </div>
 
                 <div class="row g-3">
                     <div class="col-md-6 mb-4">
                         <label class="form-label fw-bold">Fecha Pago</label>
-                        {% render_field form.fecha class="form-control rounded-3 border-light-subtle shadow-sm" %}
+                        {{ form.fecha }}
                     </div>
                     <div class="col-md-6 mb-4">
                         <label class="form-label fw-bold text-success">Monto Pagado ($)</label>
-                        {% render_field form.monto class="form-control form-control-lg rounded-3 text-success fw-bold
-                        border-success shadow-sm" placeholder="0.00" %}
+                        {{ form.monto }}
                     </div>
                 </div>
 
                 <div class="mb-4">
                     <label class="form-label fw-bold">Método de Pago</label>
-                    {% render_field form.metodo_pago class="form-select rounded-3 border-light-subtle shadow-sm" %}
+                    {{ form.metodo_pago }}
                 </div>
 
                 <div class="mb-4" id="pagado_por_container">
                     <label class="form-label fw-semibold small">Pagado por (Tercero)</label>
-                    {% render_field form.pagado_por class="form-control rounded-3 border-light-subtle shadow-sm"
-                    placeholder="Ej: Juan Pérez (Hermano)" %}
+                    {{ form.pagado_por }}
                 </div>
 
                 <div class="mb-4">
                     <label class="form-label fw-semibold small">Referencia / Comprobante</label>
-                    {% render_field form.referencia class="form-control rounded-3 border-light-subtle shadow-sm"
-                    placeholder="Ej: Transf #12345" %}
+                    {{ form.referencia }}
                 </div>
 
                 <div class="mb-4">
                     <label class="form-label fw-semibold small">Notas / Observaciones</label>
-                    {% render_field form.notas class="form-control border-light-subtle shadow-sm" rows="3" %}
+                    {{ form.notas }}
                 </div>
 
                 <div class="pt-4 border-top">
@@ -71,4 +66,15 @@
         </form>
     </div>
 </div>
+
+<style>
+    .glass-card {
+        border-top: 5px solid var(--secondary-color) !important;
+        background: #ffffff !important;
+    }
+
+    .bg-light {
+        background-color: #f8fafc !important;
+    }
+</style>
 {% endblock %}

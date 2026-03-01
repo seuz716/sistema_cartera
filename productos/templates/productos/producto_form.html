@@ -1,28 +1,283 @@
 {% extends "base.html" %}
+{% load static %}
+
+{% block title %}{% if object %}Editar{% else %}Nuevo{% endif %} Producto - CarteraPro{% endblock %}
+
+{% block extra_css %}
+<style>
+    .form-glass-container {
+        max-width: 1000px;
+        margin: 0 auto;
+    }
+
+    .image-preview-card {
+        height: 100%;
+        min-height: 350px;
+        background: #f8fafc;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        overflow: hidden;
+        position: relative;
+    }
+
+    #imagePreview {
+        width: 100%;
+        height: 100%;
+        object-fit: cover;
+        transition: transform 0.5s ease;
+    }
+
+    .image-placeholder {
+        text-align: center;
+        color: #94a3b8;
+    }
+
+    .form-section {
+        padding: 2.5rem;
+    }
+
+    .form-label {
+        font-weight: 600;
+        color: #475569;
+        margin-bottom: 0.5rem;
+        display: block;
+    }
+
+    .input-group-text {
+        background: transparent;
+        border-right: none;
+        color: #64748b;
+    }
+
+    .form-control:focus,
+    .form-select:focus {
+        border-color: var(--secondary-color);
+        box-shadow: 0 0 0 4px rgba(59, 130, 246, 0.1);
+    }
+
+    .btn-save {
+        padding: 1.25rem 2rem;
+        font-weight: 700;
+        letter-spacing: 0.5px;
+        text-transform: uppercase;
+        border-radius: 14px;
+        transition: all 0.3s;
+    }
+
+    .btn-save:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 10px 20px rgba(59, 130, 246, 0.2);
+    }
+
+    .switch-container {
+        background: #f1f5f9;
+        padding: 1.25rem;
+        border-radius: 12px;
+        border: 1px solid #e2e8f0;
+        transition: all 0.2s;
+    }
+
+    .switch-container:hover {
+        background: #e2e8f0;
+    }
+</style>
+{% endblock %}
 
 {% block content %}
-<div class="d-flex justify-content-between align-items-center mb-3">
-    <h1 class="h3">
-        {% if object %}
-            ✏ Editar Producto
-        {% else %}
-            ➕ Nuevo Producto
-        {% endif %}
-    </h1>
-    <a href="{% url 'productos:lista' %}" class="btn btn-secondary">
-        ⬅ Volver a la lista
-    </a>
-</div>
-<div class="card shadow-sm">
-    <div class="card-body">
-        <form method="post" enctype="multipart/form-data">
-            {% csrf_token %}
-            {{ form.as_p }}
-
-            <button type="submit" class="btn btn-success">
-                {% if object %}💾 Guardar Cambios{% else %}➕ Crear Producto{% endif %}
-            </button>
-        </form>
+<div class="row fade-in mb-4">
+    <div class="col-12">
+        <nav aria-label="breadcrumb">
+            <ol class="breadcrumb">
+                <li class="breadcrumb-item"><a href="{% url 'productos:lista' %}"
+                        class="text-decoration-none text-primary fw-medium">Productos</a></li>
+                <li class="breadcrumb-item active">{% if object %}Editar{% else %}Nuevo{% endif %}</li>
+            </ol>
+        </nav>
     </div>
 </div>
+
+<div class="form-glass-container fade-in">
+    <div class="row align-items-center mb-4">
+        <div class="col">
+            <h1 class="fw-bold text-dark display-6 mb-1">
+                {% if object %}
+                <i class="bi bi-pencil-square text-primary me-2"></i>Editar Producto
+                {% else %}
+                <i class="bi bi-plus-circle text-primary me-2"></i>Nuevo Producto
+                {% endif %}
+            </h1>
+            <p class="text-muted fs-5">Personaliza la ficha técnica y existencias.</p>
+        </div>
+        <div class="col-auto">
+            <a href="{% url 'productos:lista' %}" class="btn btn-link text-muted text-decoration-none">
+                <i class="bi bi-x-lg me-2"></i>Cerrar
+            </a>
+        </div>
+    </div>
+
+    <form method="post" enctype="multipart/form-data">
+        {% csrf_token %}
+        <div class="glass-card shadow-lg border-0 overflow-hidden">
+            <div class="row g-0">
+                <!-- Preview Visual -->
+                <div class="col-lg-4 border-end bg-light">
+                    <div class="image-preview-card p-4">
+                        <div id="previewContainer"
+                            class="w-100 h-100 rounded-4 overflow-hidden shadow-sm d-flex align-items-center justify-content-center bg-white border"
+                            style="min-height: 250px;">
+                            {% if producto.imagen %}
+                            <img src="{{ producto.imagen.url }}" id="imagePreview" alt="Vista previa">
+                            {% else %}
+                            <div class="image-placeholder" id="placeholderIcon">
+                                <i class="bi bi-image display-1 opacity-25"></i>
+                                <p class="mt-2 fw-medium small text-uppercase ls-wide">Previsualización</p>
+                            </div>
+                            <img src="" id="imagePreview" class="d-none" alt="Vista previa">
+                            {% endif %}
+                        </div>
+                        <div class="mt-4 w-100">
+                            <label class="form-label small text-uppercase text-muted fw-bold">Subir Imagen</label>
+                            {{ form.imagen }}
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Campos de Datos -->
+                <div class="col-lg-8">
+                    <div class="form-section">
+                        <div class="row g-4">
+                            <!-- Nombre -->
+                            <div class="col-12">
+                                <label class="form-label" for="{{ form.nombre.id_for_label }}">Nombre del
+                                    Producto</label>
+                                {{ form.nombre }}
+                                {% if form.nombre.errors %}
+                                <div class="text-danger small mt-1 animate__animated animate__shakeX">{{
+                                    form.nombre.errors }}</div>
+                                {% endif %}
+                            </div>
+
+                            <!-- Descripción -->
+                            <div class="col-12">
+                                <label class="form-label" for="{{ form.descripcion.id_for_label }}">Descripción</label>
+                                {{ form.descripcion }}
+                            </div>
+
+                            <!-- Unidad y Precio -->
+                            <div class="col-md-6">
+                                <label class="form-label" for="{{ form.unidad_medida.id_for_label }}">Unidad</label>
+                                {{ form.unidad_medida }}
+                            </div>
+
+                            <div class="col-md-6">
+                                <label class="form-label" for="{{ form.precio_unitario.id_for_label }}">Precio
+                                    ($)</label>
+                                <div class="input-group">
+                                    <span class="input-group-text border-end-0"><i class="bi bi-tag-fill"></i></span>
+                                    {{ form.precio_unitario }}
+                                </div>
+                                {% if form.precio_unitario.errors %}
+                                <div class="text-danger small mt-1">{{ form.precio_unitario.errors }}</div>
+                                {% endif %}
+                            </div>
+
+                            <!-- Stock -->
+                            <div class="col-md-6">
+                                <label class="form-label" for="{{ form.stock_actual.id_for_label }}">Stock
+                                    Actual</label>
+                                <div class="input-group">
+                                    <span class="input-group-text border-end-0"><i class="bi bi-stack"></i></span>
+                                    {{ form.stock_actual }}
+                                </div>
+                            </div>
+
+                            <!-- Switches -->
+                            <div class="col-md-6">
+                                <div class="d-flex flex-column gap-3">
+                                    <div class="form-check form-switch switch-container ms-0 ps-5">
+                                        {{ form.control_inventario }}
+                                        <label class="form-check-label fw-bold"
+                                            for="{{ form.control_inventario.id_for_label }}">Control Stock</label>
+                                    </div>
+                                    <div class="form-check form-switch switch-container ms-0 ps-5">
+                                        {{ form.activo }}
+                                        <label class="form-check-label fw-bold"
+                                            for="{{ form.activo.id_for_label }}">Producto Activo</label>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Botones -->
+                            <div class="col-12 pt-4">
+                                <div class="row g-3">
+                                    <div class="col-md-8">
+                                        <button type="submit" class="btn btn-primary btn-save w-100">
+                                            {% if object %}
+                                            <i class="bi bi-save2-fill me-2"></i>Actualizar Producto
+                                            {% else %}
+                                            <i class="bi bi-plus-lg me-2"></i>Registrar Producto
+                                            {% endif %}
+                                        </button>
+                                    </div>
+                                    <div class="col-md-4">
+                                        <a href="{% url 'productos:lista' %}"
+                                            class="btn btn-outline-light text-dark py-3 w-100"
+                                            style="border-radius: 14px; font-weight: 600;">
+                                            Volver
+                                        </a>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </form>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    // Real-time Image Preview
+    const imageInput = document.querySelector('input[type="file"]');
+    const imagePreview = document.getElementById('imagePreview');
+    const placeholderIcon = document.getElementById('placeholderIcon');
+
+    if (imageInput) {
+        imageInput.addEventListener('change', function () {
+            const file = this.files[0];
+            if (file) {
+                const reader = new FileReader();
+                reader.onload = function (e) {
+                    imagePreview.src = e.target.result;
+                    imagePreview.classList.remove('d-none');
+                    if (placeholderIcon) placeholderIcon.classList.add('d-none');
+                }
+                reader.readAsDataURL(file);
+            }
+        });
+    }
+
+    // Interactive switch highlighting
+    document.querySelectorAll('.switch-container').forEach(container => {
+        const checkbox = container.querySelector('input');
+        checkbox.addEventListener('change', () => {
+            if (checkbox.checked) {
+                container.style.borderColor = 'var(--secondary-color)';
+                container.style.color = 'var(--secondary-color)';
+            } else {
+                container.style.borderColor = '#e2e8f0';
+                container.style.color = 'inherit';
+            }
+        });
+        // Init state
+        if (checkbox.checked) {
+            container.style.borderColor = 'var(--secondary-color)';
+            container.style.color = 'var(--secondary-color)';
+        }
+    });
+</script>
 {% endblock %}

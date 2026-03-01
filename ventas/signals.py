@@ -33,17 +33,19 @@ def manejar_stock_y_totales_delete(sender, instance, **kwargs):
     instance.venta.actualizar_totales()
 
 @receiver(post_save, sender='cartera.Pago')
-def actualizar_venta_por_pago_save(sender, instance, created, **kwargs):
-    if created:
-        instance.venta.abono = F('abono') + instance.monto
-        instance.venta.save()
-        # Forzamos ejecución de lógica de saldos y estados
-        instance.venta.refresh_from_db()
-        instance.venta.actualizar_totales()
+def actualizar_venta_por_pago_save(sender, instance, **kwargs):
+    # Simplemente disparamos el recalculo completo para asegurar integridad
+    instance.venta.actualizar_totales()
 
 @receiver(post_delete, sender='cartera.Pago')
 def actualizar_venta_por_pago_delete(sender, instance, **kwargs):
-    instance.venta.abono = F('abono') - instance.monto
-    instance.venta.save()
-    instance.venta.refresh_from_db()
+    # El objeto Pago ya no está en la DB, actualizar_totales lo ignorará al sumar
     instance.venta.actualizar_totales()
+
+@receiver(post_save, sender='ventas.Venta')
+def actualizar_cliente_saldo_save(sender, instance, **kwargs):
+    """
+    Cuando cambia cualquier dato de la venta (incluyendo el saldo recalclulado por señales),
+    actualizamos el saldo total consolidado del cliente.
+    """
+    instance.cliente.recalcular_saldo()

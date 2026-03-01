@@ -66,9 +66,24 @@
     .typing-indicator {
         display: none;
         font-style: italic;
-        color: #64748b;
         font-size: 0.85rem;
         margin-bottom: 0.5rem;
+    }
+
+    .dashboard-block {
+        border-radius: 12px;
+        box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+        margin: 1.5rem 0;
+        border: 1px solid #e2e8f0;
+        padding: 1.5rem;
+        background: #ffffff;
+    }
+
+    .chart-data {
+        position: relative;
+        height: 250px;
+        width: 100%;
+        margin-top: 1.5rem;
     }
 </style>
 {% endblock %}
@@ -117,6 +132,7 @@
 {% endblock %}
 
 {% block extra_js %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 <script>
     const chatBox = document.getElementById("chat-box");
     const userInput = document.getElementById("user-input");
@@ -129,11 +145,44 @@
 
         if (sender === "user") {
             bubble.classList.add("message-user");
+            bubble.innerHTML = text.replace(/\n/g, "<br>");
         } else {
             bubble.classList.add("message-ai");
+            bubble.innerHTML = text; // Muestra HTML directo desde la IA
+
+            // Renderiza gráficos usando Chart.js
+            bubble.querySelectorAll('.chart-data').forEach(el => {
+                const ctx = document.createElement('canvas');
+                el.appendChild(ctx);
+
+                try {
+                    new Chart(ctx, {
+                        type: el.dataset.chartType || 'bar',
+                        data: {
+                            labels: JSON.parse(el.dataset.labels),
+                            datasets: [{
+                                label: 'Valor',
+                                data: JSON.parse(el.dataset.values),
+                                backgroundColor: [
+                                    '#3b82f6', '#10b981', '#f59e0b', '#ef4444',
+                                    '#8b5cf6', '#06b6d4', '#ec4899', '#64748b'
+                                ]
+                            }]
+                        },
+                        options: {
+                            responsive: true,
+                            maintainAspectRatio: false,
+                            plugins: {
+                                legend: { position: 'bottom' }
+                            }
+                        }
+                    });
+                } catch (error) {
+                    console.error("Error renderizando el gráfico:", error);
+                }
+            });
         }
 
-        bubble.innerHTML = text.replace(/\n/g, "<br>");
         chatBox.appendChild(bubble);
         chatBox.scrollTop = chatBox.scrollHeight;
     }

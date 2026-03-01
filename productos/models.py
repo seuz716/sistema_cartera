@@ -1,4 +1,6 @@
 from django.db import models
+from django.core.validators import MinValueValidator
+from decimal import Decimal
 
 
 class Producto(models.Model):
@@ -29,10 +31,19 @@ class Producto(models.Model):
     unidad_medida = models.CharField(max_length=10, choices=UNIDAD_CHOICES, default='UND')
 
     # Precios
-    precio_unitario = models.DecimalField(max_digits=12, decimal_places=2)
+    precio_unitario = models.DecimalField(
+        max_digits=12, 
+        decimal_places=2,
+        validators=[MinValueValidator(Decimal("0.00"))]
+    )
 
     # Inventario (opcional, si luego quieres manejar stock)
-    stock_actual = models.DecimalField(max_digits=12, decimal_places=2, default=0)
+    stock_actual = models.DecimalField(
+        max_digits=12, 
+        decimal_places=2, 
+        default=0,
+        validators=[MinValueValidator(Decimal("0.00"))]
+    )
     control_inventario = models.BooleanField(default=False, help_text="Si está activo, descuenta stock al vender")
 
     # Estado

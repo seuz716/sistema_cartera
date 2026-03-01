@@ -11,6 +11,11 @@
                 Detalle de Factura <span class="text-muted">#{{ object.factura }}</span>
             </h2>
             <div class="d-flex gap-2">
+                {% if object.saldo > 0 %}
+                <a href="{% url 'cartera:crear_venta' object.pk %}" class="btn btn-success rounded-pill px-4 shadow-sm">
+                    <i class="bi bi-wallet2 me-1"></i> Registrar Pago
+                </a>
+                {% endif %}
                 <button onclick="window.print()" class="btn btn-outline-info rounded-pill px-4">
                     <i class="bi bi-printer me-1"></i> Imprimir
                 </button>
