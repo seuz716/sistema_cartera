@@ -22,9 +22,11 @@ class CoreDashboardTest(TestCase):
         )
         self.producto = Producto.objects.create(nombre="Leche", precio_unitario=Decimal("2.00"))
         
+        from embarques.models import Embarque
+        self.embarque = Embarque.objects.create()
         # Venta de 20.00
-        self.venta = Venta.objects.create(factura="F-CORE-01", cliente=self.cliente, fecha="2024-03-01")
-        DetalleVenta.objects.create(venta=self.venta, producto=self.producto, cantidad=Decimal("10"), precio_unitario=Decimal("2.00"))
+        self.venta = Venta.objects.create(factura="F-CORE-01", cliente=self.cliente, fecha="2024-03-01", embarque=self.embarque)
+        DetalleVenta.objects.create(venta=self.venta, producto=self.producto, unidades_entregadas=10, cantidad_facturada=Decimal("10"), precio_unitario=Decimal("2.00"))
         self.venta.actualizar_totales() # saldo = 20.00
         
         # Pago de 5.00

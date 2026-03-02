@@ -3,9 +3,11 @@ from django.contrib.auth.mixins import LoginRequiredMixin
 from django.views.generic import ListView, DetailView, CreateView, UpdateView, DeleteView
 from django.shortcuts import redirect, get_object_or_404
 from django.contrib import messages
+from django.db import transaction
 
-from .models import Embarque, CostoEmbarque
-from .forms import EmbarqueForm, CostoEmbarqueForm
+from .models import Embarque, GastoEmbarque
+from .forms import EmbarqueForm, EmbarqueCargaFormSet, GastoEmbarqueForm
+
 
 # ========================
 # VISTAS DE EMBARQUES
@@ -24,38 +26,59 @@ class EmbarqueDetailView(LoginRequiredMixin, DetailView):
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
-        context["costos"] = self.object.costos.select_related("tipo")
-        context["costo_total"] = self.object.costo_total
+        context["gastos"] = self.object.gastos.all()
+        context["carga"] = self.object.carga_inicial.all()
+        # Resumen consolidado para el dashboard (se puede refinar más tarde)
         return context
 
 
-class EmbarqueCreateView(LoginRequiredMixin, CreateView):
+class EmbarqueFormsetMixin:
+    """Mixin para manejar el formset de carga en Create/Update."""
+    def get_context_data(self, **kwargs):
+        data = super().get_context_data(**kwargs)
+        if self.request.POST:
+            data["carga_formset"] = EmbarqueCargaFormSet(self.request.POST, instance=self.object)
+        else:
+            data["carga_formset"] = EmbarqueCargaFormSet(instance=self.object)
+        return data
+
+    def form_valid(self, form):
+        context = self.get_context_data()
+        carga_formset = context["carga_formset"]
+        with transaction.atomic():
+            self.object = form.save(commit=False)
+            if not self.object.pk:
+                self.object.usuario_registro = self.request.user
+            self.object.save()
+            
+            if carga_formset.is_valid():
+                carga_formset.instance = self.object
+                carga_formset.save()
+                # Recalcular peso inicial después de guardar la carga
+                self.object.calcular_peso_total()
+                self.object.save()
+            else:
+                return self.render_to_response(self.get_context_data(form=form))
+                
+        messages.success(self.request, "Embarque guardado correctamente.")
+        return redirect(self.get_success_url())
+
+
+class EmbarqueCreateView(LoginRequiredMixin, EmbarqueFormsetMixin, CreateView):
     model = Embarque
     form_class = EmbarqueForm
     template_name = "embarques/embarque_form.html"
-
-    def form_valid(self, form):
-        # usar manager custom para asegurar número único
-        self.object = Embarque.objects.crear_unico(
-            fecha=form.cleaned_data.get("fecha"),
-            conductor=form.cleaned_data.get("conductor"),
-            vehiculo=form.cleaned_data.get("vehiculo"),
-            placa=form.cleaned_data.get("placa"),
-        )
-        messages.success(self.request, f"Embarque {self.object.numero} creado exitosamente.")
-        return redirect(self.get_success_url())
 
     def get_success_url(self):
         return reverse("embarques:detalle", args=[self.object.pk])
 
 
-class EmbarqueUpdateView(LoginRequiredMixin, UpdateView):
+class EmbarqueUpdateView(LoginRequiredMixin, EmbarqueFormsetMixin, UpdateView):
     model = Embarque
     form_class = EmbarqueForm
     template_name = "embarques/embarque_form.html"
 
     def get_success_url(self):
-        messages.success(self.request, "Embarque actualizado correctamente.")
         return reverse("embarques:detalle", args=[self.object.pk])
 
 
@@ -70,60 +93,51 @@ class EmbarqueDeleteView(LoginRequiredMixin, DeleteView):
 
 
 # ========================
-# Mixin para Vistas de COSTOS
+# VISTAS DE TIPO EMBALAJE
 # ========================
-class CostoMixin:
-    model = CostoEmbarque
-    form_class = CostoEmbarqueForm
-    template_name = "embarques/costo_form.html"
+from .models import TipoEmbalaje, Transportador, Ruta, Vehiculo
+from .forms import TipoEmbalajeForm, TransportadorForm, RutaForm, VehiculoForm
 
-    def get_embarque(self):
-        """
-        Obtiene el embarque relacionado con el costo.
-        Funciona tanto para creación como edición/eliminación.
-        """
-        # Para Update/Delete: el objeto ya existe
-        if hasattr(self, 'object') and self.object is not None:
-            return self.object.embarque
-        # Para Create: obtener desde kwargs
-        embarque_id = self.kwargs.get("embarque_id")
-        if embarque_id:
-            return get_object_or_404(Embarque, pk=embarque_id)
-        return None
+class TipoEmbalajeCreateView(LoginRequiredMixin, CreateView):
+    model = TipoEmbalaje
+    form_class = TipoEmbalajeForm
+    template_name = "embarques/generic_form.html"
+    success_url = reverse_lazy("embarques:crear")
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
-        context["embarque"] = self.get_embarque()
+        context["titulo"] = "Nuevo Tipo de Embalaje"
         return context
 
-    def form_valid(self, form):
-        form.instance.embarque = self.get_embarque()
-        messages.success(self.request, "Costo guardado exitosamente.")
-        return super().form_valid(form)
+class TransportadorCreateView(LoginRequiredMixin, CreateView):
+    model = Transportador
+    form_class = TransportadorForm
+    template_name = "embarques/generic_form.html"
+    success_url = reverse_lazy("embarques:crear")
 
-    def get_success_url(self):
-        embarque = self.get_embarque()
-        if embarque:
-            return reverse("embarques:detalle", args=[embarque.pk])
-        return reverse("embarques:lista")
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context["titulo"] = "Nuevo Transportador"
+        return context
 
+class RutaCreateView(LoginRequiredMixin, CreateView):
+    model = Ruta
+    form_class = RutaForm
+    template_name = "embarques/ruta_form.html"
+    success_url = reverse_lazy("embarques:crear")
 
-# ========================
-# VISTAS DE COSTOS
-# ========================
-class CostoCrearView(LoginRequiredMixin, CostoMixin, CreateView):
-    pass
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context["titulo"] = "Nueva Ruta"
+        return context
 
+class VehiculoCreateView(LoginRequiredMixin, CreateView):
+    model = Vehiculo
+    form_class = VehiculoForm
+    template_name = "embarques/generic_form.html"
+    success_url = reverse_lazy("embarques:crear")
 
-class CostoUpdateView(LoginRequiredMixin, CostoMixin, UpdateView):
-    pass
-
-
-class CostoDeleteView(LoginRequiredMixin, DeleteView):
-    model = CostoEmbarque
-    template_name = "embarques/costo_confirm_delete.html"
-
-    def get_success_url(self):
-        embarque = self.object.embarque
-        messages.success(self.request, "Costo eliminado correctamente.")
-        return reverse("embarques:detalle", args=[embarque.pk])
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context["titulo"] = "Nuevo Vehículo"
+        return context

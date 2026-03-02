@@ -1,9 +1,17 @@
 from django import forms
 from django.core.exceptions import ValidationError
 from decimal import Decimal
+from django.forms import inlineformset_factory
 
-from .models import Embarque, CostoEmbarque, TipoCosto
-
+from .models import (
+    Embarque, 
+    EmbarqueCarga, 
+    GastoEmbarque, 
+    Ruta, 
+    Vehiculo, 
+    Transportador, 
+    TipoEmbalaje
+)
 
 # ----------------------------
 # WIDGETS BOOTSTRAP
@@ -28,110 +36,111 @@ def bootstrap_date():
 # FORMULARIO EMBARQUE
 # ======================
 class EmbarqueForm(forms.ModelForm):
-    """
-    Formulario para crear/editar embarques.
-    Normaliza entradas de texto (conductor, vehículo, placa).
-    """
+    """Formulario para la gestión de embarques (Cabecera)."""
 
     class Meta:
         model = Embarque
-        fields = ["fecha", "conductor", "vehiculo", "placa"]
+        fields = ["fecha", "ruta", "vehiculo", "transportador", "conductor", "estado"]
         widgets = {
             "fecha": bootstrap_date(),
+            "ruta": bootstrap_select(),
+            "vehiculo": bootstrap_select(),
+            "transportador": bootstrap_select(),
             "conductor": bootstrap_input(placeholder="Nombre del conductor"),
-            "vehiculo": bootstrap_input(placeholder="Ej: Camión 3.5T"),
-            "placa": bootstrap_input(placeholder="ABC123"),
+            "estado": bootstrap_select(),
         }
 
-    def clean_conductor(self):
-        conductor = self.cleaned_data.get("conductor", "").strip().title()
-        if not conductor:
-            raise ValidationError("El nombre del conductor es obligatorio.")
-        return conductor
-
-    def clean_vehiculo(self):
-        vehiculo = self.cleaned_data.get("vehiculo", "")
-        return vehiculo.strip().title() if vehiculo else vehiculo
-
-    def clean_placa(self):
-        placa = self.cleaned_data.get("placa", "")
-        return placa.strip().upper() if placa else placa
-
 
 # ======================
-# FORMULARIO COSTO EMBARQUE
+# FORMULARIO CARGA (PRODUCTOS QUE SALEN)
 # ======================
-class CostoEmbarqueForm(forms.ModelForm):
+class EmbarqueCargaForm(forms.ModelForm):
     """
-    Formulario profesional para registrar costos de embarque.
-    Calcula monto automáticamente y asegura coherencia entre cantidad, precio y unidad.
+    Formulario para cada línea de producto cargado.
+    Aquí es donde el usuario define cuántas unidades salen.
     """
-
     class Meta:
-        model = CostoEmbarque
-        fields = [
-            "embarque",
-            "tipo",
-            "descripcion",
-            "cantidad",
-            "unidad",
-            "precio_unitario",
-            "monto",
-            "fecha",
-            "recibo",
-        ]
+        model = EmbarqueCarga
+        fields = ["producto", "tipo_embalaje", "cantidad_unidades"]
         widgets = {
-            "embarque": forms.HiddenInput(),  # Se asigna desde la vista
-            "tipo": bootstrap_select(),
-            "descripcion": bootstrap_input(placeholder="Notas adicionales"),
-            "cantidad": bootstrap_number(),
-            "unidad": bootstrap_select(),
-            "precio_unitario": bootstrap_number(),
-            "monto": bootstrap_number(readonly=True),
-            "fecha": bootstrap_date(),
-            "recibo": forms.ClearableFileInput(attrs={"class": "form-control"}),
+            "producto": bootstrap_select(),
+            "tipo_embalaje": bootstrap_select(),
+            "cantidad_unidades": bootstrap_number(step="1"),
         }
 
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
-        # Garantizar que tipo muestre todos los tipos de costo disponibles
-        self.fields["tipo"].queryset = TipoCosto.objects.all().order_by("nombre")
-        # Monto readonly
-        self.fields["monto"].disabled = True
-
-    def clean_recibo(self):
-        recibo = self.cleaned_data.get("recibo")
-        if recibo:
-            if recibo.size > 5 * 1024 * 1024:  # Máximo 5MB
-                raise ValidationError("El archivo no puede superar 5MB.")
-        return recibo
-
-    def clean(self):
-        cleaned_data = super().clean()
-        unidad = cleaned_data.get("unidad")
-        cantidad = cleaned_data.get("cantidad") or Decimal("0.00")
-        precio = cleaned_data.get("precio_unitario") or Decimal("0.00")
-
-        # Calcular monto automáticamente
-        monto = precio if unidad == "COP" else cantidad * precio
-
-        if monto <= 0:
-            raise ValidationError("El monto del costo debe ser mayor a 0.")
-
-        cleaned_data["monto"] = monto.quantize(Decimal("1.00"))
-        return cleaned_data
+    def clean_cantidad_unidades(self):
+        cant = self.cleaned_data.get("cantidad_unidades")
+        if cant and cant <= 0:
+            raise ValidationError("La cantidad debe ser mayor a cero.")
+        return cant
 
 
-# ======================
-# INLINE FORMSET OPCIONAL
-# ======================
-from django.forms import inlineformset_factory
-
-CostoEmbarqueFormSet = inlineformset_factory(
+EmbarqueCargaFormSet = inlineformset_factory(
     Embarque,
-    CostoEmbarque,
-    form=CostoEmbarqueForm,
-    extra=1,
+    EmbarqueCarga,
+    form=EmbarqueCargaForm,
+    extra=3,
     can_delete=True
 )
 
+
+# ======================
+# FORMULARIO GASTO OPERATIVO
+# ======================
+class GastoEmbarqueForm(forms.ModelForm):
+    """Formulario para registrar gastos como combustible o peajes."""
+    class Meta:
+        model = GastoEmbarque
+        fields = ["tipo", "descripcion", "monto", "comprobante"]
+        widgets = {
+            "tipo": bootstrap_select(),
+            "descripcion": bootstrap_input(placeholder="Ej: Estación de servicio Texaco"),
+            "monto": bootstrap_number(),
+            "comprobante": forms.ClearableFileInput(attrs={"class": "form-control"}),
+        }
+
+
+class TipoEmbalajeForm(forms.ModelForm):
+    """Formulario para crear nuevos tipos de embalaje."""
+    class Meta:
+        model = TipoEmbalaje
+        fields = ["nombre", "peso_vacio_kg"]
+        widgets = {
+            "nombre": bootstrap_input(placeholder="Ej: Canastilla Plástica"),
+            "peso_vacio_kg": bootstrap_number(),
+        }
+
+
+class TransportadorForm(forms.ModelForm):
+    class Meta:
+        model = Transportador
+        fields = ["nombre", "documento", "telefono", "tarifa_base_viaje"]
+        widgets = {
+            "nombre": bootstrap_input(placeholder="Nombre completo"),
+            "documento": bootstrap_input(placeholder="NIT/Cédula"),
+            "telefono": bootstrap_input(placeholder="Teléfono"),
+            "tarifa_base_viaje": bootstrap_number(),
+        }
+
+
+class RutaForm(forms.ModelForm):
+    class Meta:
+        model = Ruta
+        fields = ["nombre", "vehiculo_predeterminado", "ciudades_itinerario"]
+        widgets = {
+            "nombre": bootstrap_input(placeholder="Ej: Ruta Norte"),
+            "vehiculo_predeterminado": bootstrap_select(),
+            "ciudades_itinerario": forms.Textarea(attrs={"class": "form-control", "rows": 3}),
+        }
+
+
+class VehiculoForm(forms.ModelForm):
+    class Meta:
+        model = Vehiculo
+        fields = ["placa", "marca", "modelo", "capacidad_carga_kg"]
+        widgets = {
+            "placa": bootstrap_input(placeholder="ABC-123"),
+            "marca": bootstrap_input(placeholder="Ej: Hino"),
+            "modelo": bootstrap_input(placeholder="Ej: 2024"),
+            "capacidad_carga_kg": bootstrap_number(),
+        }

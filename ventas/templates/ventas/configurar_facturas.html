@@ -1,0 +1,93 @@
+{% extends 'base.html' %}
+
+{% block title %}Configurar Facturas - CarteraPro{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center">
+    <div class="col-md-6 col-lg-5">
+        <div class="card border-0 shadow-sm rounded-4 p-4 mt-4">
+            <div class="text-center mb-4">
+                <div class="bg-primary bg-opacity-10 d-inline-flex rounded-circle p-3 mb-3">
+                    <i class="bi bi-gear-fill text-primary fs-2"></i>
+                </div>
+                <h3 class="fw-bold">Configurar Consecutivo de Facturas</h3>
+                <p class="text-muted">
+                    {% if config %}
+                    Actualiza el prefijo o el número de inicio del consecutivo.
+                    {% else %}
+                    Esta es la primera vez que usas la facturación.
+                    Define el prefijo y el número desde el que comenzarán las facturas.
+                    {% endif %}
+                </p>
+            </div>
+
+            {% if messages %}
+            <div>
+                {% for message in messages %}
+                <div class="alert alert-{{ message.tags }} alert-dismissible fade show" role="alert">
+                    {{ message }}
+                    <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                </div>
+                {% endfor %}
+            </div>
+            {% endif %}
+
+            <form method="post">
+                {% csrf_token %}
+
+                <div class="mb-4">
+                    <label class="form-label fw-semibold">
+                        {{ form.prefijo.label }}
+                        <span class="text-danger">*</span>
+                    </label>
+                    {{ form.prefijo }}
+                    <div class="form-text">{{ form.prefijo.help_text }}</div>
+                </div>
+
+                <div class="mb-4">
+                    <label class="form-label fw-semibold">
+                        {{ form.numero_inicio.label }}
+                        <span class="text-danger">*</span>
+                    </label>
+                    {{ form.numero_inicio }}
+                    <div class="form-text">{{ form.numero_inicio.help_text }}</div>
+                </div>
+
+                <div class="alert alert-info d-flex align-items-center gap-2 py-2">
+                    <i class="bi bi-info-circle-fill fs-5"></i>
+                    <span>
+                        La primera factura se generará como:
+                        <strong id="preview-factura">
+                            {{ config.prefijo|default:"FV" }}{{ config.numero_inicio|default:"1" }}
+                        </strong>
+                    </span>
+                </div>
+
+                <div class="d-grid mt-3">
+                    <button type="submit" class="btn btn-primary btn-lg rounded-pill py-3">
+                        <i class="bi bi-check2-circle me-2"></i> Guardar Configuración
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    const prefijoInput = document.querySelector('[name="prefijo"]');
+    const numeroInput = document.querySelector('[name="numero_inicio"]');
+    const preview = document.getElementById('preview-factura');
+
+    function updatePreview() {
+        const p = prefijoInput.value.trim() || 'FV';
+        const n = numeroInput.value.trim() || '1';
+        preview.textContent = p + n;
+    }
+
+    prefijoInput.addEventListener('input', updatePreview);
+    numeroInput.addEventListener('input', updatePreview);
+    updatePreview();
+</script>
+{% endblock %}

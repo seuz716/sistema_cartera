@@ -1,66 +1,207 @@
 {% extends 'base.html' %}
-{% load widget_tweaks %}
 
 {% block content %}
-<div class="container mt-5">
-    <div class="d-flex justify-content-between align-items-center mb-3">
-        <h2><i class="bi bi-truck me-2"></i> Embarque {{ object.numero }}</h2>
-        <a href="{% url 'embarques:lista' %}" class="btn btn-outline-secondary">
-            <i class="bi bi-arrow-left"></i> Volver
-        </a>
-    </div>
-
-    <div class="card shadow-sm border-0 rounded-4 mb-4">
-        <div class="card-body">
-            <p><strong>Conductor:</strong> {{ object.conductor }}</p>
-            <p><strong>Vehículo:</strong> {{ object.vehiculo }}</p>
-            <p><strong>Placa:</strong> {{ object.placa }}</p>
-            <p><strong>Fecha:</strong> {{ object.fecha|date:"d/m/Y" }}</p>
-            <p><strong>Total de Costos:</strong> ${{ object.costo_total }}</p>
+<div class="container-fluid mt-4 px-4">
+    <!-- Header & Actions -->
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h2 class="mb-0 fw-bold text-primary">
+                <i class="bi bi-truck-flatbed me-2"></i> Embarque #{{ embarque.numero }}
+            </h2>
+            <span class="badge border text-dark bg-light px-3 py-2 mt-2">
+                Estado:
+                {% if embarque.estado == 'PROGRAMADO' %}<span class="text-primary fw-bold">📅 PROGRAMADO</span>
+                {% elif embarque.estado == 'EN_RUTA' %}<span class="text-warning fw-bold">🚛 EN RUTA</span>
+                {% elif embarque.estado == 'FINALIZADO' %}<span class="text-success fw-bold">✅ FINALIZADO</span>
+                {% else %}{{ embarque.estado }}{% endif %}
+            </span>
         </div>
-    </div>
-
-    <div class="card shadow-sm border-0 rounded-4">
-        <div class="card-header bg-secondary text-white rounded-top-4">
-            <h5 class="mb-0"><i class="bi bi-cash-stack me-2"></i> Costos del Embarque</h5>
-        </div>
-        <div class="card-body p-4">
-            <a href="{% url 'embarques:costo_crear' object.id %}" class="btn btn-success mb-3">
-                <i class="bi bi-plus-circle me-1"></i> Agregar Costo
+        <div class="d-flex gap-2">
+            <a href="{% url 'embarques:lista' %}" class="btn btn-outline-secondary">
+                <i class="bi bi-arrow-left"></i> Lista
             </a>
+            {% if embarque.estado != 'FINALIZADO' %}
+            <a href="{% url 'embarques:editar' embarque.pk %}" class="btn btn-warning text-white">
+                <i class="bi bi-pencil"></i> Editar
+            </a>
+            {% endif %}
+        </div>
+    </div>
 
-            {% if object.costos.all %}
-                <table class="table table-hover align-middle">
-                    <thead class="table-light">
-                        <tr>
-                            <th>Tipo</th>
-                            <th>Descripción</th>
-                            <th>Fecha</th>
-                            <th>Monto</th>
-                            <th></th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        {% for costo in object.costos.all %}
-                        <tr>
-                            <td>{{ costo.tipo.nombre }}</td>
-                            <td>{{ costo.descripcion }}</td>
-                            <td>{{ costo.fecha|date:"d/m/Y" }}</td>
-                            <td>${{ costo.monto }}</td>
-                            <td class="text-end">
-                                <a href="{% url 'embarques:costo_editar' costo.pk %}" class="btn btn-sm btn-outline-warning">
-                                    <i class="bi bi-pencil"></i>
-                                </a>
-                                <a href="{% url 'embarques:costo_eliminar' costo.pk %}" class="btn btn-sm btn-outline-danger">
-                                    <i class="bi bi-trash"></i>
-                                </a>
-                            </td>
-                        </tr>
-                        {% endfor %}
-                    </tbody>
-                </table>
-            {% else %}
-                <p class="text-muted">No hay costos registrados para este embarque.</p>
+    <div class="row g-4">
+        <!-- Dashboard Logístico (Izquierda) -->
+        <div class="col-lg-8">
+            <div class="card shadow-sm border-0 rounded-4 mb-4">
+                <div class="card-header bg-white py-3 border-bottom">
+                    <h5 class="mb-0 fw-bold text-secondary"><i class="bi bi-box-seam me-2"></i> Carga Inicial &
+                        Inventario</h5>
+                </div>
+                <div class="card-body p-0">
+                    <div class="table-responsive">
+                        <table class="table table-hover align-middle mb-0">
+                            <thead class="bg-light">
+                                <tr>
+                                    <th class="ps-4">Producto</th>
+                                    <th>Cargado (Unidades)</th>
+                                    <th>Embalaje</th>
+                                    <th class="text-center">Cant. Paquetes</th>
+                                    <th class="text-end pe-4">Peso Est.</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for item in carga %}
+                                <tr>
+                                    <td class="ps-4 fw-bold text-dark">{{ item.producto.nombre }}</td>
+                                    <td>{{ item.cantidad_unidades|floatformat:0 }}</td>
+                                    <td><span class="badge bg-info text-white">{{ item.tipo_embalaje.nombre }}</span>
+                                    </td>
+                                    <td class="text-center">{{ item.cantidad_paquetes }}</td>
+                                    <td class="text-end pe-4 text-muted">{{ item.peso_item_kg }} kg</td>
+                                </tr>
+                                {% empty %}
+                                <tr>
+                                    <td colspan="5" class="text-center py-4 text-muted">No hay carga inicial registrada.
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                            <tfoot class="table-group-divider">
+                                <tr class="bg-light">
+                                    <td colspan="4" class="ps-4 fw-bold">PESO TOTAL ESTIMADO:</td>
+                                    <td class="text-end pe-4 fw-bold text-primary">{{ embarque.peso_total_kg }} kg</td>
+                                </tr>
+                            </tfoot>
+                        </table>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Dashboard de Embalajes (Control Físico) -->
+            <div class="row g-4 mb-4">
+                <div class="col-md-4">
+                    <div class="p-3 bg-light rounded-4 shadow-sm text-center">
+                        <h6 class="text-muted mb-2 text-uppercase fw-bold" style="font-size: 0.8rem;">Embalajes Cargados</h6>
+                        <h1 class="display-5 fw-bold mb-0">{{ embarque.total_embalajes_enviados }}</h1>
+                        <p class="mb-0 text-white-50 small text-uppercase fw-bold">Enviadas</p>
+                    </div>
+                </div>
+                <div class="col-md-4">
+                    <div class="p-3 bg-light rounded-4 shadow-sm text-center">
+                        <h6 class="text-muted mb-2 text-uppercase fw-bold" style="font-size: 0.8rem;">Embalajes Entregados</h6>
+                        <h1 class="display-5 fw-bold mb-0 text-success">{{ embarque.total_embalajes_entregados }}</h1>
+                        <p class="mb-0 text-white-50 small text-uppercase fw-bold">Entregadas</p>
+                    </div>
+                </div>
+                <div class="col-md-4">
+                    <div class="p-3 bg-light rounded-4 shadow-sm text-center">
+                        <h6 class="text-muted mb-2 text-uppercase fw-bold" style="font-size: 0.8rem;">Embalajes Devueltos</h6>
+                        <h1 class="display-5 fw-bold mb-0 text-danger">{{ embarque.total_embalajes_devueltos }}</h1>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Gastos Operativos -->
+            <div class="card shadow-sm border-0 rounded-4">
+                <div class="card-header bg-white py-3 border-bottom d-flex justify-content-between align-items-center">
+                    <h5 class="mb-0 fw-bold text-secondary"><i class="bi bi-wallet2 me-2"></i> Gastos Operativos</h5>
+                    {% if embarque.estado != 'FINALIZADO' %}
+                    <a href="#" class="btn btn-sm btn-outline-primary"><i class="bi bi-plus"></i> Registrar Gasto</a>
+                    {% endif %}
+                </div>
+                <div class="card-body p-0">
+                    <div class="table-responsive">
+                        <table class="table table-hover align-middle mb-0">
+                            <thead class="bg-light">
+                                <tr>
+                                    <th class="ps-4">Tipo</th>
+                                    <th>Descripción</th>
+                                    <th class="text-end pe-4">Monto</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for gasto in gastos %}
+                                <tr>
+                                    <td class="ps-4">{{ gasto.tipo_gasto }}</td>
+                                    <td>{{ gasto.descripcion }}</td>
+                                    <td class="text-end pe-4 fw-bold text-danger">${{ gasto.monto }}</td>
+                                </tr>
+                                {% empty %}
+                                <tr>
+                                    <td colspan="3" class="text-center py-4 text-muted">No hay gastos registrados.</td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Información Lateral (Derecha) -->
+        <div class="col-lg-4">
+            <!-- Info Vehículo/Ruta -->
+            <div class="card shadow-sm border-0 rounded-4 mb-4">
+                <div class="card-body p-4 text-center">
+                    <div class="mb-3">
+                        <i class="bi bi-person-badge-fill text-primary display-4"></i>
+                    </div>
+                    <h5 class="fw-bold mb-1">{{ embarque.transportador.nombre }}</h5>
+                    <p class="text-muted small mb-3">Transportador Oficial</p>
+                    <hr>
+                    <div class="text-start">
+                        <p class="mb-2"><strong><i class="bi bi-map me-2"></i> Ruta:</strong> {{ embarque.ruta.nombre }}
+                        </p>
+                        <p class="mb-2"><strong>
+                            <i class="bi bi-truck me-2"></i> Vehículo:</strong> 
+                            {{embarque.vehiculo.placa }} ({{ embarque.vehiculo.marca }})</p>
+                        <p class="mb-0"><strong>
+                            <i class="bi bi-calendar-event me-2"></i> Fecha:</strong> 
+                            {{embarque.fecha|date:"D d M, Y" }}</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Resumen Financiero -->
+            <div class="card shadow-sm border-0 rounded-4 bg-dark text-white">
+                <div class="card-body p-4">
+                    <h5 class="fw-bold mb-4 border-bottom border-secondary pb-3">Resumen Financiero</h5>
+
+                    <div class="d-flex justify-content-between mb-3">
+                        <span class="text-secondary">Ingresos (Ventas):</span>
+                        <span class="fw-bold text-success">${{ embarque.ingresos_ventas }}</span>
+                    </div>
+                    <div class="d-flex justify-content-between mb-2">
+                        <span class="text-secondary">Pago Transportador:</span>
+                        <span class="text-danger">-${{ embarque.pago_transportador }}</span>
+                    </div>
+                    <div class="d-flex justify-content-between mb-3 border-bottom border-secondary pb-3">
+                        <span class="text-secondary">Gastos Operativos:</span>
+                        <span class="text-danger">-${{ embarque.gastos_operativos }}</span>
+                    </div>
+
+                    <div class="d-flex justify-content-between pt-2">
+                        <h4 class="fw-bold mb-0">Utilidad Neta:</h4>
+                        <h4
+                            class="fw-bold mb-0 {% if embarque.utilidad_neta >= 0 %}text-success{% else %}text-danger{% endif %}">
+                            ${{ embarque.utilidad_neta }}
+                        </h4>
+                    </div>
+                </div>
+            </div>
+
+            {% if embarque.estado != 'FINALIZADO' %}
+            <div class="mt-4">
+                <form method="post" action="#">
+                    {% csrf_token %}
+                    <button type="submit" class="btn btn-primary w-100 py-3 rounded-4 shadow">
+                        <i class="bi bi-check-circle me-2"></i> CERRAR Y FINALIZAR EMBARQUE
+                    </button>
+                    <p class="text-muted small mt-2 text-center">
+                        <i class="bi bi-exclamation-triangle-fill text-warning"></i>
+                        Esta acción activará el cuadre matemático nivel banco.
+                    </p>
+                </form>
+            </div>
             {% endif %}
         </div>
     </div>

@@ -10,7 +10,7 @@ class ClienteAdmin(admin.ModelAdmin):
     readonly_fields = (
         'saldo',
         'fecha_creacion',
-        'fecha_actualizacion',
+        'fecha_modificacion',
     )
 
     fieldsets = (
@@ -33,6 +33,6 @@ class ClienteAdmin(admin.ModelAdmin):
             "fields": ("activo",),
         }),
         ("Trazabilidad", {
-            "fields": ("fecha_creacion", "fecha_actualizacion"),
+            "fields": ("fecha_creacion", "fecha_modificacion"),
         }),
     )

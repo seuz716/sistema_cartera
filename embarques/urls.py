@@ -14,21 +14,10 @@ urlpatterns = [
     path("<int:pk>/eliminar/", views.EmbarqueDeleteView.as_view(), name="eliminar"),
 
     # -----------------------
-    # COSTOS DE EMBARQUE
+    # INFRAESTRUCTURA
     # -----------------------
-    path(
-        "<int:embarque_id>/costos/nuevo/",
-        views.CostoCrearView.as_view(),
-        name="costo_crear"
-    ),
-    path(
-        "costos/<int:pk>/editar/",
-        views.CostoUpdateView.as_view(),
-        name="costo_editar"
-    ),
-    path(
-        "costos/<int:pk>/eliminar/",
-        views.CostoDeleteView.as_view(),
-        name="costo_eliminar"
-    ),
+    path("embalajes/nuevo/", views.TipoEmbalajeCreateView.as_view(), name="embalaje_crear"),
+    path("transportadores/nuevo/", views.TransportadorCreateView.as_view(), name="transportador_crear"),
+    path("rutas/nuevo/", views.RutaCreateView.as_view(), name="ruta_crear"),
+    path("vehiculos/nuevo/", views.VehiculoCreateView.as_view(), name="vehiculo_crear"),
 ]

@@ -1,7 +1,7 @@
-# recoleccion/models.py
 from django.db import models
 from django.utils import timezone
 from proveedores.models import Proveedor  # 👈 Importar el proveedor
+from core.models import AuditModel
 
 class Ruta(models.Model):
     nombre = models.CharField(max_length=100)
@@ -11,7 +11,7 @@ class Ruta(models.Model):
         return self.nombre
 
 
-class Recoleccion(models.Model):
+class Recoleccion(AuditModel):
     proveedor = models.ForeignKey(Proveedor, on_delete=models.CASCADE, related_name="recolecciones")
     ruta = models.ForeignKey(Ruta, on_delete=models.CASCADE, related_name="recolecciones", null=True, blank=True)
     fecha = models.DateField(default=timezone.now)

@@ -117,6 +117,13 @@ LANGUAGE_CODE = 'es-co'
 TIME_ZONE = 'America/Bogota'
 
 USE_I18N = True
+USE_L10N = True
+
+# Formato de números para Colombia (ej: 1.000,00)
+USE_THOUSAND_SEPARATOR = True
+THOUSAND_SEPARATOR = '.'
+DECIMAL_SEPARATOR = ','
+NUMBER_GROUPING = 3
 
 USE_TZ = True
 

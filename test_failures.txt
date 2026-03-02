@@ -1,0 +1,26 @@
+Creating test database for alias 'default'...
+...........................................F..........
+======================================================================
+FAIL: test_json_devuelve_datos_correctos (ventas.tests.test_ventas.EmbarqueJsonTests.test_json_devuelve_datos_correctos)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/home/cesar/mis_proyectos/sistema_cartera/ventas/tests/test_ventas.py", line 206, in test_json_devuelve_datos_correctos
+    self.assertJSONEqual(response.content, {
+AssertionError: {'conductor': '', 'vehiculo': 'Camión Z1 (ABC123)', 'placa': 'ABC123'} != {'conductor': 'Carlos', 'vehiculo': 'Camión Z1 (ABC123)', 'placa': 'ABC123'}
+- {'conductor': '', 'placa': 'ABC123', 'vehiculo': 'Camión Z1 (ABC123)'}
++ {'conductor': 'Carlos', 'placa': 'ABC123', 'vehiculo': 'Camión Z1 (ABC123)'}
+?                ++++++
+
+
+----------------------------------------------------------------------
+Ran 54 tests in 18.487s
+
+FAILED (failures=1)
+Destroying test database for alias 'default'...
+Found 54 test(s).
+System check identified no issues (0 silenced).
+Modelo: gemini-2.5-flash-lite | Accion: analyze_data
+ERROR: GEMINI_API_KEY no encontrada en las variables de entorno.
+Modelo: gemini-2.5-flash-lite | Accion: analyze_data
+Modelo: gemini-2.5-flash-lite | Accion: chat_response
+Modelo: gemini-2.5-flash-lite | Accion: chat_response

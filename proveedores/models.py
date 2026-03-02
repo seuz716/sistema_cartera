@@ -1,7 +1,8 @@
 from django.db import models
+from core.models import AuditModel
 
 
-class Proveedor(models.Model):
+class Proveedor(AuditModel):
     nombre = models.CharField(max_length=100)
     identificacion = models.CharField(max_length=20, unique=True)
     telefono = models.CharField(max_length=20, blank=True, null=True)

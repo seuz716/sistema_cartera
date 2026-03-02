@@ -10,45 +10,81 @@
                 <h2 class="fw-bold mb-1 text-primary">
                     <i class="bi bi-receipt me-2"></i>Nueva Venta / Facturación
                 </h2>
-                <p class="text-muted mb-0">Genere facturas detalladas y descuente automáticamente del inventario.</p>
+                <p class="text-muted mb-0">
+                    Genere facturas detalladas y descuente automáticamente del inventario.
+                    &nbsp;|&nbsp;
+                    <span class="fw-semibold text-success">
+                        <i class="bi bi-tag-fill me-1"></i>Próximo N°: <strong>{{ proxima_factura }}</strong>
+                    </span>
+                </p>
             </div>
-            <a href="{% url 'ventas:lista' %}" class="btn btn-outline-secondary rounded-pill px-4">
-                <i class="bi bi-arrow-left me-1"></i> Volver al listado
-            </a>
+            <div class="d-flex gap-2">
+                <a href="{% url 'ventas:configurar_facturas' %}" class="btn btn-outline-secondary rounded-pill px-3"
+                    title="Configurar consecutivo">
+                    <i class="bi bi-gear me-1"></i> Configurar
+                </a>
+                <a href="{% url 'ventas:lista' %}" class="btn btn-outline-secondary rounded-pill px-4">
+                    <i class="bi bi-arrow-left me-1"></i> Volver al listado
+                </a>
+            </div>
         </div>
 
         <form method="post" id="venta-form" class="needs-validation" novalidate>
             {% csrf_token %}
+            {# Factura oculta — se asigna automáticamente en el servidor #}
+            {{ form.factura }}
+
+            {% if form.errors or formset.errors %}
+            <div class="alert alert-danger rounded-4 shadow-sm mb-4">
+                <h6 class="fw-bold"><i class="bi bi-exclamation-triangle me-2"></i> Errores en el formulario:</h6>
+                {{ form.non_field_errors }}
+                {{ formset.non_form_errors }}
+                <ul class="mb-0 small">
+                    {% for field in form %}
+                        {% if field.errors %}
+                            <li><strong>{{ field.label }}:</strong> {{ field.errors|striptags }}</li>
+                        {% endif %}
+                    {% endfor %}
+                </ul>
+            </div>
+            {% endif %}
 
             <div class="row">
                 <!-- Factura Header -->
                 <div class="col-md-4">
                     <div class="glass-card p-4 p-md-5 shadow-sm border-0 h-100">
-                        <h5 class="fw-bold text-dark border-bottom pb-3 mb-4"><i
-                                class="bi bi-card-checklist me-2 text-primary"></i>Encabezado</h5>
+                        <h5 class="fw-bold text-dark border-bottom pb-3 mb-4">
+                            <i class="bi bi-card-checklist me-2 text-primary"></i>Encabezado
+                        </h5>
 
                         <div class="mb-3">
-                            <label class="form-label fw-semibold small">N° Factura (Visible)</label>
-                            {{ form.factura }}
-                        </div>
-
-                        <div class="mb-3">
-                            <label class="form-label fw-semibold small">Cliente</label>
+                            <label class="form-label fw-semibold small" for="id_cliente">
+                                Cliente <span class="text-danger">*</span>
+                            </label>
                             {{ form.cliente }}
+                            {% if form.cliente.errors %}
+                            <div class="text-danger small mt-1">{{ form.cliente.errors }}</div>
+                            {% endif %}
                         </div>
 
                         <div class="mb-3">
-                            <label class="form-label fw-semibold small">Fecha Emisión</label>
+                            <label class="form-label fw-semibold small" for="id_fecha">Fecha Emisión</label>
                             {{ form.fecha }}
                         </div>
 
                         <div class="mb-3">
-                            <label class="form-label fw-semibold small">Embarque / Ruta</label>
+                            <label class="form-label fw-semibold small" for="id_embarque">
+                                Embarque / Ruta
+                            </label>
                             {{ form.embarque }}
+                            <div class="form-text text-muted">
+                                <i class="bi bi-info-circle me-1"></i>
+                                Al seleccionar un embarque se rellenará el conductor.
+                            </div>
                         </div>
 
                         <div class="mb-3">
-                            <label class="form-label fw-semibold small">Conductor</label>
+                            <label class="form-label fw-semibold small" for="id_conductor">Conductor</label>
                             {{ form.conductor }}
                         </div>
                     </div>
@@ -57,8 +93,9 @@
                 <!-- Detalles (Items) -->
                 <div class="col-md-8">
                     <div class="glass-card p-4 p-md-5 shadow-sm border-0 h-100">
-                        <h5 class="fw-bold text-dark border-bottom pb-3 mb-4"><i
-                                class="bi bi-box-seam me-2 text-primary"></i>Detalles de Venta (Productos)</h5>
+                        <h5 class="fw-bold text-dark border-bottom pb-3 mb-4">
+                            <i class="bi bi-box-seam me-2 text-primary"></i>Detalles de Venta (Productos)
+                        </h5>
 
                         {{ formset.management_form }}
                         <div id="formset-container">
@@ -75,15 +112,9 @@
                                 <tbody>
                                     {% for det_form in formset %}
                                     <tr class="formset-row">
-                                        <td>
-                                            {{ det_form.producto }}
-                                        </td>
-                                        <td>
-                                            {{ det_form.cantidad }}
-                                        </td>
-                                        <td>
-                                            {{ det_form.precio_unitario }}
-                                        </td>
+                                        <td>{{ det_form.producto }}</td>
+                                        <td>{{ det_form.cantidad }}</td>
+                                        <td>{{ det_form.precio_unitario }}</td>
                                         <td class="text-end fw-bold text-dark">
                                             <span class="row-total">$0.00</span>
                                         </td>
@@ -109,12 +140,17 @@
                         <div class="row justify-content-end">
                             <div class="col-md-6">
                                 <div class="p-3 bg-light rounded-4 shadow-sm">
-                                    <div class="d-flex justify-content-between mb-2">
+                                    <div class="d-flex justify-content-between align-items-center mb-2">
+                                        <span class="text-muted small">Subtotal:</span>
+                                        <span class="fw-semibold" id="subtotal-display">$0.00</span>
+                                    </div>
+                                    <div class="d-flex justify-content-between align-items-center mb-2">
                                         <span class="text-muted">Flete Transporte (-):</span>
                                         {{ form.flete }}
                                     </div>
-                                    <div class="d-flex justify-content-between mb-3 border-bottom pb-2">
-                                        <span class="text-muted">Descuento Global (-):</span>
+                                    <div
+                                        class="d-flex justify-content-between align-items-center mb-3 border-bottom pb-2">
+                                        <span class="text-muted">Descuento / Devolución (-):</span>
                                         {{ form.descuentos }}
                                     </div>
                                     <div class="d-flex justify-content-between align-items-center">
@@ -135,97 +171,17 @@
             </div>
 
             <div class="mt-4 bg-white p-4 rounded-4 shadow-sm">
-                <label class="form-label fw-bold">Notas adicionales</label>
+                <label class="form-label fw-bold" for="{{ form.notas.id_for_label }}">Notas adicionales</label>
                 {{ form.notas }}
             </div>
         </form>
     </div>
 </div>
+{% endblock %}
 
-<script>
-    document.addEventListener('DOMContentLoaded', function () {
-        const addBtn = document.getElementById('add-row');
-        const container = document.querySelector('#formset-container tbody');
-        const totalForms = document.getElementById('id_detalles-TOTAL_FORMS');
-        const finalTotalDisplay = document.getElementById('final-total');
-
-        const fleteInput = document.querySelector('[name="flete"]');
-        const descInput = document.querySelector('[name="descuentos"]');
-
-        function calculateGrandTotal() {
-            let subtotal = 0;
-            document.querySelectorAll('.formset-row').forEach(row => {
-                const qtyInput = row.querySelector('[name$="-cantidad"]');
-                const priceInput = row.querySelector('[name$="-precio_unitario"]');
-                const rowTotalDisplay = row.querySelector('.row-total');
-
-                if (qtyInput && priceInput) {
-                    const rowSum = (parseFloat(qtyInput.value) || 0) * (parseFloat(priceInput.value) || 0);
-                    subtotal += rowSum;
-                    if (rowTotalDisplay) {
-                        rowTotalDisplay.innerText = `$${rowSum.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
-                    }
-                }
-            });
-
-            const flete = parseFloat(fleteInput.value) || 0;
-            const desc = parseFloat(descInput.value) || 0;
-            const total = subtotal - flete - desc;
-
-            finalTotalDisplay.innerText = `$${total.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
-        }
-
-        addBtn.addEventListener('click', function () {
-            let rowCount = parseInt(totalForms.value);
-            let firstRow = document.querySelector('.formset-row');
-            if (!firstRow) return;
-
-            let newRow = firstRow.cloneNode(true);
-
-            newRow.querySelectorAll('input, select, textarea').forEach(input => {
-                const nameAttr = input.getAttribute('name');
-                if (nameAttr) {
-                    input.setAttribute('name', nameAttr.replace(/-[0-9]+-/, `-${rowCount}-`));
-                }
-                const idAttr = input.getAttribute('id');
-                if (idAttr) {
-                    input.setAttribute('id', idAttr.replace(/-[0-9]+-/, `-${rowCount}-`));
-                }
-
-                input.value = '';
-                if (input.tagName === 'SELECT') input.selectedIndex = 0;
-                input.addEventListener('input', calculateGrandTotal);
-            });
-
-            const deleteInput = newRow.querySelector('[name$="-DELETE"]');
-            if (deleteInput) deleteInput.remove();
-
-            const rowTotal = newRow.querySelector('.row-total');
-            if (rowTotal) rowTotal.innerText = '$0.00';
-
-            container.appendChild(newRow);
-            totalForms.value = rowCount + 1;
-            calculateGrandTotal();
-        });
-
-        container.addEventListener('click', function (e) {
-            if (e.target.closest('.remove-row')) {
-                let rows = document.querySelectorAll('.formset-row');
-                if (rows.length > 1) {
-                    e.target.closest('.formset-row').remove();
-                    calculateGrandTotal();
-                }
-            }
-        });
-
-        document.querySelectorAll('.formset-row input, .formset-row select, [name="flete"], [name="descuentos"]').forEach(input => {
-            input.addEventListener('input', calculateGrandTotal);
-        });
-
-        calculateGrandTotal();
-    });
-</script>
-
+{% block extra_css %}
+{# Select2 CSS #}
+<link href="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css" rel="stylesheet" />
 <style>
     .glass-card {
         border-top: 5px solid var(--secondary-color) !important;
@@ -235,5 +191,164 @@
     .bg-light {
         background-color: #f8fafc !important;
     }
+
+    /* Select2 integración visual */
+    .select2-container--default .select2-selection--single {
+        height: calc(3.5rem + 2px);
+        padding: .5rem 1rem;
+        border-radius: .5rem;
+        border: 1px solid #dee2e6;
+        display: flex;
+        align-items: center;
+    }
+
+    .select2-container--default .select2-selection--single .select2-selection__rendered {
+        line-height: unset;
+        color: #212529;
+    }
+
+    .select2-container--default .select2-selection--single .select2-selection__arrow {
+        height: 100%;
+        top: 0;
+    }
+
+    .select2-dropdown {
+        border-radius: .5rem;
+        box-shadow: 0 4px 16px rgba(0, 0, 0, .12);
+    }
+
+    .select2-search--dropdown .select2-search__field {
+        border-radius: .375rem;
+        padding: .4rem .75rem;
+    }
 </style>
+{% endblock %}
+
+{% block extra_js %}
+{# jQuery (si no viene del base) #}
+<script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
+{# Select2 JS #}
+<script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
+
+<script>
+    $(document).ready(function () {
+
+        /* ── SELECT2 para Cliente ─────────────────────── */
+        $('.select2-cliente').select2({
+            placeholder: "Buscar por nombre o documento…",
+            allowClear: true,
+            width: '100%',
+            language: {
+                noResults: function () { return "Sin resultados"; },
+                searching: function () { return "Buscando…"; }
+            }
+        });
+
+        /* ── SELECT2 para Embarque ─────────────────────── */
+        $('#id_embarque').select2({
+            placeholder: "— Sin embarque —",
+            allowClear: true,
+            width: '100%',
+        });
+
+        /* ── Auto-llenar conductor al seleccionar embarque ── */
+        const CONDUCTOR_URL = "{% url 'ventas:embarque_conductor' pk=0 %}".replace('/0/', '/');
+
+        $('#id_embarque').on('change', function () {
+            const embarqueId = $(this).val();
+            const conductorInput = $('#id_conductor');
+
+            if (!embarqueId) {
+                return; // No limpiar si ya tenía valor manualmente
+            }
+
+            $.getJSON(CONDUCTOR_URL + embarqueId + '/conductor/', function (data) {
+                if (data.conductor) {
+                    conductorInput.val(data.conductor);
+                }
+            }).fail(function (jqXHR, textStatus, errorThrown) {
+                console.warn('No se pudo obtener datos del embarque:', textStatus, errorThrown);
+            });
+        });
+
+        /* ── Cálculo de totales ──────────────────────── */
+        const totalForms = document.getElementById('id_detalles-TOTAL_FORMS');
+        const finalDisplay = document.getElementById('final-total');
+        const subtotalDisp = document.getElementById('subtotal-display');
+        const fleteInput = document.querySelector('[name="flete"]');
+        const descInput = document.querySelector('[name="descuentos"]');
+
+        function fmtMoney(n) {
+            return '$' + n.toLocaleString('es-CO', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+        }
+
+        function calculateGrandTotal() {
+            let subtotal = 0;
+            document.querySelectorAll('.formset-row').forEach(row => {
+                const qty = row.querySelector('[name$="-cantidad"]');
+                const price = row.querySelector('[name$="-precio_unitario"]');
+                const rowTd = row.querySelector('.row-total');
+                const rowSum = (parseFloat(qty?.value) || 0) * (parseFloat(price?.value) || 0);
+                subtotal += rowSum;
+                if (rowTd) rowTd.innerText = fmtMoney(rowSum);
+            });
+
+            const flete = parseFloat(fleteInput?.value) || 0;
+            const desc = parseFloat(descInput?.value) || 0;
+
+            // Flete y descuentos RESTAN del subtotal
+            const total = subtotal - flete - desc;
+
+            if (subtotalDisp) subtotalDisp.innerText = fmtMoney(subtotal);
+            if (finalDisplay) finalDisplay.innerText = fmtMoney(total < 0 ? 0 : total);
+        }
+
+        /* ── Agregar fila ─────────────────────── */
+        document.getElementById('add-row').addEventListener('click', function () {
+            let rowCount = parseInt(totalForms.value);
+            let firstRow = document.querySelector('.formset-row');
+            if (!firstRow) return;
+
+            let newRow = firstRow.cloneNode(true);
+            newRow.querySelectorAll('input, select, textarea').forEach(input => {
+                const name = input.getAttribute('name');
+                if (name) input.setAttribute('name', name.replace(/-\d+-/, `-${rowCount}-`));
+                const id = input.getAttribute('id');
+                if (id) input.setAttribute('id', id.replace(/-\d+-/, `-${rowCount}-`));
+                input.value = '';
+                if (input.tagName === 'SELECT') input.selectedIndex = 0;
+                input.addEventListener('input', calculateGrandTotal);
+            });
+
+            const deleteInput = newRow.querySelector('[name$="-DELETE"]');
+            if (deleteInput) deleteInput.remove();
+            const rowTotal = newRow.querySelector('.row-total');
+            if (rowTotal) rowTotal.innerText = '$0.00';
+
+            document.querySelector('#formset-container tbody').appendChild(newRow);
+            totalForms.value = rowCount + 1;
+            calculateGrandTotal();
+        });
+
+        /* ── Quitar fila ─────────────────────── */
+        document.querySelector('#formset-container tbody').addEventListener('click', function (e) {
+            if (e.target.closest('.remove-row')) {
+                const rows = document.querySelectorAll('.formset-row');
+                if (rows.length > 1) {
+                    e.target.closest('.formset-row').remove();
+                    calculateGrandTotal();
+                }
+            }
+        });
+
+        /* ── Listeners generales ─────────────────────── */
+        document.querySelectorAll('.formset-row input, .formset-row select').forEach(input => {
+            input.addEventListener('input', calculateGrandTotal);
+        });
+        fleteInput?.addEventListener('input', calculateGrandTotal);
+        descInput?.addEventListener('input', calculateGrandTotal);
+
+        calculateGrandTotal();
+    });
+</script>
 {% endblock %}

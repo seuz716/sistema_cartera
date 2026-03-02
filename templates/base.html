@@ -171,6 +171,21 @@
     </nav>
 
     <main class="container content-wrapper">
+        {% if messages %}
+        {% for message in messages %}
+        <div class="alert alert-{{ message.tags|default:'info' }} alert-dismissible fade show rounded-3 shadow-sm mb-4"
+            role="alert">
+            {% if message.tags == 'success' %}<i class="bi bi-check-circle me-2"></i>
+            {% elif message.tags == 'error' or message.tags == 'danger' %}<i
+                class="bi bi-exclamation-triangle me-2"></i>
+            {% elif message.tags == 'warning' %}<i class="bi bi-exclamation-circle me-2"></i>
+            {% else %}<i class="bi bi-info-circle me-2"></i>{% endif %}
+            {{ message }}
+            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+        </div>
+        {% endfor %}
+        {% endif %}
+
         {% block content %}
         {% endblock %}
     </main>

@@ -3,13 +3,13 @@
 
 {% block content %}
 <div class="container mt-5">
-    <div class="card shadow-sm border-0 rounded-4">
+    <div class="card shadow-sm border-0 rounded-4 mb-4">
         <div class="card-header bg-primary text-white rounded-top-4">
             <h3 class="mb-0">
                 {% if form.instance.pk %}
-                    <i class="bi bi-pencil-square me-2"></i> Editar Embarque
+                <i class="bi bi-pencil-square me-2"></i> Editar Embarque
                 {% else %}
-                    <i class="bi bi-truck me-2"></i> Nuevo Embarque
+                <i class="bi bi-truck me-2"></i> Nuevo Embarque
                 {% endif %}
             </h3>
         </div>
@@ -18,21 +18,103 @@
             <form method="post" novalidate>
                 {% csrf_token %}
 
+                <h5 class="mb-3 text-secondary"><i class="bi bi-info-circle me-2"></i> Información General</h5>
                 <div class="row g-3">
-                    {% for field in form %}
-                        <div class="col-md-6">
-                            <label for="{{ field.id_for_label }}" class="form-label fw-semibold">
-                                {{ field.label }}
-                            </label>
-                            {{ field|add_class:"form-control" }}
-                            {% if field.help_text %}
-                                <div class="form-text text-muted">{{ field.help_text }}</div>
-                            {% endif %}
-                            {% if field.errors %}
-                                <div class="text-danger small">{{ field.errors|striptags }}</div>
-                            {% endif %}
+                    <div class="col-md-3">
+                        <label for="{{ form.fecha.id_for_label }}" class="form-label fw-semibold">{{ form.fecha.label }}</label>
+                        {{ form.fecha|add_class:"form-control" }}
+                    </div>
+                    <div class="col-md-3">
+                        <label for="{{ form.ruta.id_for_label }}" class="form-label fw-semibold">{{ form.ruta.label }}</label>
+                        <div class="input-group">
+                            {{ form.ruta|add_class:"form-control form-select" }}
+                            <a href="{% url 'embarques:ruta_crear' %}" class="btn btn-outline-primary" target="_blank" title="Nueva Ruta">
+                                <i class="bi bi-plus-lg"></i>
+                            </a>
                         </div>
-                    {% endfor %}
+                    </div>
+                    <div class="col-md-3">
+                        <label for="{{ form.vehiculo.id_for_label }}" class="form-label fw-semibold">
+                            {{ form.vehiculo.label }}
+                        </label>
+                        <div class="input-group">
+                            {{ form.vehiculo|add_class:"form-control form-select" }}
+                            <a href="{% url 'embarques:vehiculo_crear' %}" class="btn btn-outline-primary" target="_blank" title="Nuevo Vehículo">
+                                <i class="bi bi-plus-lg"></i>
+                            </a>
+                        </div>
+                    </div>
+                    <div class="col-md-3">
+                        <label for="{{ form.transportador.id_for_label }}" class="form-label fw-semibold">{{ form.transportador.label }}</label>
+                        <div class="input-group">
+                            {{ form.transportador|add_class:"form-control form-select" }}
+                            <a href="{% url 'embarques:transportador_crear' %}" class="btn btn-outline-primary" target="_blank" title="Nuevo Transportador">
+                                <i class="bi bi-plus-lg"></i>
+                            </a>
+                        </div>
+                    </div>
+                    <div class="col-md-3 offset-md-9">
+                         <label for="{{ form.estado.id_for_label }}" class="form-label fw-semibold">{{ form.estado.label }}</label>
+                         {{ form.estado|add_class:"form-control form-select" }}
+                    </div>
+                </div>
+
+                <hr class="my-4">
+
+                <div class="d-flex justify-content-between align-items-center mb-3">
+                    <h5 class="text-secondary mb-0"><i class="bi bi-box-seam me-2"></i> Carga Inicial (Productos que salen)</h5>
+                    <button type="button" class="btn btn-sm btn-outline-info" onclick="window.location.reload()">
+                        <i class="bi bi-arrow-clockwise"></i> Sincronizar Listas
+                    </button>
+                </div>
+                <p class="text-muted small">Indica los productos y el tipo de embalaje con el que sale el vehículo. Si agregaste un producto nuevo en otra pestaña, pulsa "Sincronizar Listas" (guarda primero para no perder cambios).</p>
+
+                {{ carga_formset.management_form }}
+                <div class="table-responsive">
+                    <table class="table table-hover align-middle">
+                        <thead class="table-light">
+                            <tr>
+                                <th>Producto</th>
+                                <th>Tipo de Embalaje</th>
+                                <th>Cantidad (Unidades/Kg)</th>
+                                <th>Eliminar</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for c_form in carga_formset %}
+                            <tr>
+                                <td>
+                                    {% for hidden in c_form.hidden_fields %}{{ hidden }}{% endfor %}
+                                    <div class="input-group">
+                                        {{ c_form.producto|add_class:"form-control form-select" }}
+                                        <a href="{% url 'productos:crear' %}" class="btn btn-outline-primary btn-sm" target="_blank" title="Nuevo Producto">
+                                            <i class="bi bi-plus-lg"></i>
+                                        </a>
+                                    </div>
+                                    {% if c_form.producto.errors %}<div class="text-danger small">{{ c_form.producto.errors }}</div>{% endif %}
+                                </td>
+                                <td>
+                                    <div class="input-group">
+                                        {{ c_form.tipo_embalaje|add_class:"form-control form-select" }}
+                                        <a href="{% url 'embarques:embalaje_crear' %}" class="btn btn-outline-primary btn-sm" target="_blank" title="Nuevo Embalaje">
+                                            <i class="bi bi-plus-lg"></i>
+                                        </a>
+                                    </div>
+                                    {% if c_form.tipo_embalaje.errors %}<div class="text-danger small">{{ c_form.tipo_embalaje.errors }}</div>{% endif %}
+                                </td>
+                                <td>
+                                    {{ c_form.cantidad_unidades|add_class:"form-control text-end" }}
+                                    {% if c_form.cantidad_unidades.errors %}<div class="text-danger small">{{ c_form.cantidad_unidades.errors }}</div>{% endif %}
+                                </td>
+                                <td class="text-center">
+                                    {% if carga_formset.can_delete %}
+                                    {{ c_form.DELETE|add_class:"form-check-input" }}
+                                    {% endif %}
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
                 </div>
 
                 <div class="d-flex justify-content-end gap-2 mt-4">
@@ -41,11 +123,37 @@
                     </a>
                     <button type="submit" class="btn btn-success px-4">
                         <i class="bi bi-save me-1"></i>
-                        {% if form.instance.pk %}Actualizar{% else %}Guardar{% endif %}
+                        {% if form.instance.pk %}Actualizar Embarque{% else %}Crear Embarque{% endif %}
                     </button>
                 </div>
             </form>
         </div>
     </div>
 </div>
+
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        const rutaSelect = document.getElementById('id_ruta');
+        const vehiculoSelect = document.getElementById('id_vehiculo');
+
+        const rutaVehiculoMap = {
+            {% for ruta in form.fields.ruta.queryset %}
+                {% if ruta.vehiculo_predeterminado %}
+                    "{{ ruta.id }}": "{{ ruta.vehiculo_predeterminado.id }}",
+                {% endif %}
+            {% endfor %}
+        };
+
+        if (rutaSelect && vehiculoSelect) {
+            rutaSelect.addEventListener('change', function() {
+                const targetVehiculoId = rutaVehiculoMap[this.value];
+                if (targetVehiculoId) {
+                    vehiculoSelect.value = targetVehiculoId;
+                    vehiculoSelect.classList.add('is-valid');
+                    setTimeout(() => vehiculoSelect.classList.remove('is-valid'), 1500);
+                }
+            });
+        }
+    });
+</script>
 {% endblock %}

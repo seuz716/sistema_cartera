@@ -1,6 +1,8 @@
 from django.db import models
 
-class Cliente(models.Model):
+from core.models import AuditModel
+
+class Cliente(AuditModel):
     # Número único de identificación automático
     numero_unico = models.AutoField(primary_key=True)
     # Número de identificación proporcionado por el usuario
@@ -30,10 +32,16 @@ class Cliente(models.Model):
     forma_pago = models.CharField(max_length=20, choices=FORMA_PAGO_CHOICES)
     dias_credito = models.PositiveIntegerField(blank=True, null=True, help_text="Si selecciona 'Otro', especifique los días de crédito")
     
-    fecha_creacion = models.DateTimeField(auto_now_add=True)
-    fecha_actualizacion = models.DateTimeField(auto_now=True)
     saldo = models.DecimalField(max_digits=12, decimal_places=2, default=0)
     activo = models.BooleanField(default=True)
+
+    class Meta:
+        verbose_name = "Cliente"
+        verbose_name_plural = "Clientes"
+        indexes = [
+            models.Index(fields=['numero_identificacion']),
+            models.Index(fields=['nombre', 'apellido']),
+        ]
 
     def recalcular_saldo(self):
         """
@@ -46,9 +54,10 @@ class Cliente(models.Model):
         self.saldo = total_deuda
         self.save()
 
+    @property
     def nombre_completo(self):
         return f"{self.nombre} {self.apellido}"
 
     def __str__(self):
-        return self.nombre_completo()
+        return self.nombre_completo
 

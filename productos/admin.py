@@ -16,7 +16,7 @@ class ProductoAdmin(admin.ModelAdmin):
         "control_inventario",
         "activo",
         "fecha_creacion",
-        "fecha_actualizacion",
+        "fecha_modificacion",
     )
 
     # enlaces clicables en el listado
@@ -32,7 +32,7 @@ class ProductoAdmin(admin.ModelAdmin):
     ordering = ("nombre",)
 
     # campos de solo lectura
-    readonly_fields = ("fecha_creacion", "fecha_actualizacion")
+    readonly_fields = ("fecha_creacion", "fecha_modificacion")
 
     # organización de los campos en el formulario del admin
     fieldsets = (
@@ -46,7 +46,7 @@ class ProductoAdmin(admin.ModelAdmin):
             "fields": ("activo",),
         }),
         ("Auditoría", {
-            "fields": ("fecha_creacion", "fecha_actualizacion"),
+            "fields": ("fecha_creacion", "fecha_modificacion"),
             "classes": ("collapse",),
         }),
     )
