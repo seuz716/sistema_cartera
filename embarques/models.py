@@ -327,6 +327,16 @@ class Embarque(AuditModel):
         self.estado = 'cerrado'
         self.save()
 
+    def reabrir_embarque(self):
+        """
+        Permite reabrir un embarque cerrado para realizar ajustes.
+        """
+        if self.estado != 'cerrado':
+            return
+            
+        self.estado = 'transito'
+        self.save()
+
     def liquidar_sobrantes(self, destino='retorno', motivo="Liquidación final"):
         """
         Vacia el camión. 

@@ -1,0 +1,56 @@
+# docker-compose.yml para producción y desarrollo local
+version: "3.8"
+
+services:
+  db:
+    image: postgres:15-alpine
+    container_name: sistema-cartera-db
+    restart: always
+    environment:
+      POSTGRES_DB: ${DB_NAME:-cartera_db}
+      POSTGRES_USER: ${DB_USER:-admin_user}
+      POSTGRES_PASSWORD: ${DB_PASSWORD:-mypassword123}
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    networks:
+      - app-network
+    healthcheck:
+      test:
+        [
+          "CMD-SHELL",
+          "pg_isready -U ${DB_USER:-admin_user} -d ${DB_NAME:-cartera_db}",
+        ]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  web:
+    build: .
+    container_name: sistema-cartera-web
+    restart: always
+    command: ["/app/entrypoint.sh"]
+    volumes:
+      - .:/app
+      - static_volume:/app/staticfiles
+      - media_volume:/app/media
+    environment:
+      - DATABASE_URL=postgres://${DB_USER:-admin_user}:${DB_PASSWORD:-mypassword123}@db:5432/${DB_NAME:-cartera_db}
+      - DJANGO_DEBUG=False
+      - DJANGO_SECRET_KEY=${DJANGO_SECRET_KEY:-SUPER-SECRET-CHANGE-ME}
+      - DJANGO_ALLOWED_HOSTS=${DJANGO_ALLOWED_HOSTS:-*}
+    depends_on:
+      db:
+        condition: service_healthy
+    ports:
+      - "8000:8000"
+    networks:
+      - app-network
+
+volumes:
+  postgres_data:
+  static_volume:
+  media_volume:
+
+networks:
+  app-network:
+    driver: bridge
