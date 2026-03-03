@@ -36,6 +36,13 @@ class PagoForm(forms.ModelForm):
             'notas': forms.Textarea(attrs={'class': 'form-control border-light-subtle shadow-sm', 'rows': 3}),
         }
 
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        # Nivel Senior: Mostrar saldo en el selector de facturas
+        from ventas.models import Venta
+        self.fields['venta'].queryset = Venta.objects.filter(saldo__gt=0).order_by('factura')
+        self.fields['venta'].label_from_instance = lambda obj: f"Factura {obj.factura} - {obj.cliente.nombre} (Saldo: ${obj.saldo:,.2f})"
+
     def clean_monto(self):
         monto = self.cleaned_data.get('monto')
         venta = self.cleaned_data.get('venta')

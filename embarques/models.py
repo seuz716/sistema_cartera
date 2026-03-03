@@ -308,18 +308,51 @@ class Embarque(AuditModel):
 
     def cerrar_embarque(self):
         """
-        Cierra el embarque si todo el inventario ha sido liquidado (es 0).
+        Cierra el embarque. Valida que no quede inventario en el camión.
         """
         from django.core.exceptions import ValidationError
+        from django.db.models import Sum
         
-        items = self.items.all()
-        total_disp = sum(i.cantidad_disponible_unidades + i.cantidad_disponible_kg for i in items)
+        # Sumar todas las disponibilidades
+        total_und = self.items.aggregate(total=Sum('cantidad_disponible_unidades'))['total'] or 0
+        total_kg = self.items.aggregate(total=Sum('cantidad_disponible_kg'))['total'] or 0
+        total_lts = self.items.aggregate(total=Sum('cantidad_disponible_litros'))['total'] or 0
         
-        if total_disp > 0:
-            raise ValidationError("No se puede cerrar el embarque porque aún tiene inventario disponible.")
+        if total_und > 0 or total_kg > 0 or total_lts > 0:
+            raise ValidationError(
+                "No se puede cerrar el embarque porque aún tiene inventario en el camión. "
+                "Debe facturarlo, registrarlo como merma o devolverlo al almacén."
+            )
         
         self.estado = 'cerrado'
         self.save()
+
+    def liquidar_sobrantes(self, destino='retorno', motivo="Liquidación final"):
+        """
+        Vacia el camión. 
+        'retorno': Vuelve a la bodega principal.
+        'merma': Se pierde.
+        """
+        from django.db import transaction
+        from .models import NovedadEmbarque
+        
+        with transaction.atomic():
+            for item in self.items.all():
+                tipo_nov = 'devolucion' if destino == 'retorno' else 'ajuste_merma'
+                # En NovedadEmbarque, 'devolucion' significa retornar al camión o bodega.
+                # Pero en nuestro caso queremos RETORNO_ALMACEN si va a bodega.
+                
+                # Para ser claros, usaremos un nuevo tipo o ajustaremos NovedadEmbarque
+                if item.cantidad_disponible_unidades > 0 or item.cantidad_disponible_kg > 0 or item.cantidad_disponible_litros > 0:
+                    NovedadEmbarque.objects.create(
+                        embarque=self,
+                        producto=item.producto,
+                        tipo='retorno_almacen' if destino == 'retorno' else 'ajuste_merma',
+                        cantidad_unidades=item.cantidad_disponible_unidades,
+                        cantidad_kg=item.cantidad_disponible_kg,
+                        cantidad_litros=item.cantidad_disponible_litros,
+                        descripcion=f"{motivo} - {destino}"
+                    )
 
     def calcular_resultados(self, commit=True):
         """
@@ -397,6 +430,18 @@ class Embarque(AuditModel):
             }
         return inventory
 
+    def delete(self, *args, **kwargs):
+        """
+        Si se elimina un embarque en tránsito, debemos asegurarnos de devolver
+        el inventario no vendido al almacén.
+        """
+        from django.db import transaction
+        with transaction.atomic():
+            # Forzamos eliminación individual de items para disparar su lógica de reversión
+            for item in self.items.all():
+                item.delete()
+            super().delete(*args, **kwargs)
+
     def __str__(self):
         return f"Embarque {self.numero} - {self.ruta.nombre} ({self.fecha})"
 
@@ -431,6 +476,29 @@ class EmbarqueItem(models.Model):
             self.cantidad_disponible_litros = self.cantidad_litros or 0
         
         super().save(*args, **kwargs)
+
+    def delete(self, *args, **kwargs):
+        """
+        Si el ítem está en tránsito, devuelve lo disponible al almacén central.
+        """
+        from django.db import transaction
+        from productos.models import MovimientoInventario
+        
+        if self.embarque.estado == 'transito':
+            with transaction.atomic():
+                # Registrar el retorno al almacén
+                # Nota: MovimientoInventario.save() ya sumará a Producto.stock_actual
+                MovimientoInventario.objects.create(
+                    producto=self.producto,
+                    embarque=self.embarque,
+                    tipo='retorno_almacen',
+                    cantidad_unidades=self.cantidad_disponible_unidades,
+                    cantidad_kg=self.cantidad_disponible_kg,
+                    cantidad_litros=self.cantidad_disponible_litros,
+                    descripcion=f"Retorno por anulación/eliminación de item {self.id} en embarque {self.embarque.numero}"
+                )
+        
+        super().delete(*args, **kwargs)
 
     @property
     def peso_item_kg(self):

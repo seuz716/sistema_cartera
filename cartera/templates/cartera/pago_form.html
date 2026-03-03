@@ -24,6 +24,9 @@
                 <div class="mb-4">
                     <label class="form-label fw-bold">Factura de Venta</label>
                     {{ form.venta }}
+                    <div class="form-text text-primary small" id="saldo-hint">
+                        Seleccione una factura para ver su saldo.
+                    </div>
                 </div>
 
                 <div class="row g-3">
@@ -71,10 +74,47 @@
     .glass-card {
         border-top: 5px solid var(--secondary-color) !important;
         background: #ffffff !important;
-    }
-
-    .bg-light {
-        background-color: #f8fafc !important;
+        border-radius: 20px;
     }
 </style>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        const ventaSelect = document.querySelector('select[name="venta"]');
+        const montoInput = document.querySelector('input[name="monto"]');
+        const saldoHint = document.getElementById('saldo-hint');
+
+        function updateFromVenta() {
+            if (!ventaSelect || ventaSelect.selectedIndex < 0) return;
+            
+            const text = ventaSelect.options[ventaSelect.selectedIndex].text;
+            const match = text.match(/\(Saldo: \$(.*)\)/);
+            
+            if (match && match[1]) {
+                const rawSaldo = match[1]; // e.g. "1.234,56"
+                let cleanVal = rawSaldo.replace(/\./g, '').replace(',', '.').trim();
+                const saldo = parseFloat(cleanVal);
+                
+                if (!isNaN(saldo)) {
+                    saldoHint.innerHTML = `<i class="bi bi-info-circle me-1"></i> Saldo pendiente: <strong>$ ${rawSaldo}</strong>`;
+                    
+                    // Auto-llenar monto si está vacío o es 0
+                    if (!montoInput.value || parseFloat(montoInput.value) === 0) {
+                        montoInput.value = saldo.toFixed(2);
+                    }
+                }
+            } else {
+                saldoHint.textContent = "Seleccione una factura.";
+            }
+        }
+
+        if (ventaSelect) {
+            ventaSelect.addEventListener('change', updateFromVenta);
+            // Ejecutar al cargar por si ya viene una factura pre-seleccionada
+            updateFromVenta();
+        }
+    });
+</script>
 {% endblock %}

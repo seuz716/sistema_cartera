@@ -108,10 +108,17 @@ class Venta(AuditModel):
     flete = models.DecimalField(max_digits=12, decimal_places=2, default=0)
 
     # Valores financieros globales
-    subtotal = models.DecimalField(max_digits=12, decimal_places=2, default=0)
+    subtotal = models.DecimalField(max_digits=12, decimal_places=2, default=0, editable=False)
     descuentos = models.DecimalField(max_digits=12, decimal_places=2, default=0)
-    total = models.DecimalField(max_digits=12, decimal_places=2, default=0)
-    total_con_flete = models.DecimalField(max_digits=12, decimal_places=2, default=0)
+    total = models.DecimalField(max_digits=12, decimal_places=2, default=0, editable=False)
+    
+    # Regla de Flete: ¿Se le cobra al cliente o es un gasto que resta de la utilidad?
+    flete_cobrado_al_cliente = models.BooleanField(
+        default=False, 
+        verbose_name="Flete cobrado al cliente",
+        help_text="SI: se suma al total. NO: se resta del total (descuento logístico)."
+    )
+    total_con_flete = models.DecimalField(max_digits=12, decimal_places=2, default=0, editable=False)
 
     # Automatización de Embalajes (Nivel Banco)
     total_embalajes_automatico = models.BooleanField(
@@ -161,9 +168,22 @@ class Venta(AuditModel):
         return f"Factura {self.factura} - {self.cliente}"
 
     def save(self, *args, **kwargs):
+        is_new = self.pk is None
+        old_estado = None
+        if not is_new:
+            old_estado = Venta.objects.get(pk=self.pk).estado
+
         if not self.factura:
             self.factura = generar_consecutivo()
+        
         super().save(*args, **kwargs)
+
+        # Si la factura se ANULA, debemos devolver el inventario al embarque (Logística Inversa)
+        if old_estado != 'ANULADA' and self.estado == 'ANULADA':
+            from django.db import transaction
+            with transaction.atomic():
+                for detalle in self.detalles.all():
+                    detalle.devolver_inventario_por_anulacion()
 
     def actualizar_totales(self) -> None:
         """
@@ -176,13 +196,22 @@ class Venta(AuditModel):
         venta = Venta.objects.select_for_update().get(pk=self.pk)
 
         # 2. Totales de productos (usando agregación en DB para mayor precisión y rendimiento)
-        subtotal = venta.detalles.aggregate(total=models.Sum('precio_total'))['total'] or Decimal('0.00')
+        datos_items = venta.detalles.aggregate(
+            total_sub=models.Sum('precio_total')
+        )
         
-        venta.subtotal = subtotal
-        # Descuentos restan del subtotal
-        venta.total = subtotal - venta.descuentos
-        # Flete RESTA al total final (gasto/comisión asumido de la venta o descuento logístico)
-        venta.total_con_flete = venta.total - venta.flete
+        venta.subtotal = datos_items['total_sub'] or Decimal('0.00')
+        
+        # Descuentos siempre restan del subtotal
+        venta.total = venta.subtotal - venta.descuentos
+        
+        # 3. Aplicación de Flete según regla ERP
+        if venta.flete_cobrado_al_cliente:
+            # Regla SUMA: El cliente paga el flete (Incrementa Cartera)
+            venta.total_con_flete = venta.total + venta.flete
+        else:
+            # Regla RESTA: El vendedor asume el flete como gasto (Deduce de Cartera/Factura)
+            venta.total_con_flete = venta.total - venta.flete
 
         # 3. Recalcular Abonos (usando agregación)
         venta.abono = venta.pagos.aggregate(total=models.Sum('monto'))['total'] or Decimal('0.00')
@@ -256,6 +285,14 @@ class DetalleVenta(AuditModel):
     cantidad_devuelta_facturada = models.DecimalField(max_digits=12, decimal_places=2, default=0)
     
     precio_unitario = models.DecimalField(max_digits=12, decimal_places=2)
+    
+    # Lógica de Tajado (Slicing)
+    tajado = models.BooleanField(default=False, verbose_name="¿Requiere Tajado?")
+    precio_tajado_unidad = models.DecimalField(
+        max_digits=10, decimal_places=2, default=0,
+        help_text="Costo adicional por unidad tajada"
+    )
+    
     precio_total = models.DecimalField(max_digits=12, decimal_places=2, editable=False)
 
     # Relación con el transporte (Nivel Banco)
@@ -308,7 +345,13 @@ class DetalleVenta(AuditModel):
         from django.core.exceptions import ValidationError
         from productos.models import MovimientoInventario
 
-        # 1. Sincronización de campos nuevos -> viejos
+        # 1. Sincronización de campos y cálculos desde Embalajes (Regla Crema/Excel)
+        if (self.cantidad_unidades is None or self.cantidad_unidades == 0) and self.embalajes_entregados > 0:
+            from embarques.models import CapacidadEmbalaje
+            capacidad = CapacidadEmbalaje.objects.filter(producto=self.producto).first()
+            if capacidad and capacidad.unidades_por_paquete > 0:
+                self.cantidad_unidades = self.embalajes_entregados * capacidad.unidades_por_paquete
+        
         if self.cantidad_unidades is not None:
              self.unidades_entregadas = int(self.cantidad_unidades)
         
@@ -322,11 +365,17 @@ class DetalleVenta(AuditModel):
             if self.cantidad_unidades is not None:
                 self.cantidad_facturada = self.cantidad_unidades
 
-        # 2. Cálculos base
-        self.precio_total = (self.cantidad_facturada or 0) * (self.precio_unitario or 0)
+        # 2. Cálculos base (Derivación determinística)
+        # Total Item = (Cantidad * Precio) + (Unidades * Precio Tajado)
+        subtotal_producto = (self.cantidad_facturada or Decimal('0')) * (self.precio_unitario or Decimal('0'))
+        cargo_tajado = Decimal('0')
+        if self.tajado:
+            cargo_tajado = (self.unidades_entregadas or 0) * (self.precio_tajado_unidad or Decimal('0'))
+            
+        self.precio_total = subtotal_producto + cargo_tajado
 
-        # 2. Lógica de Inventario (Solo si la venta tiene un embarque)
-        if self.venta.embarque and not self.embarque_item:
+        # 3. Lógica de Inventario (Solo si el producto requiere control y tiene un embarque)
+        if self.producto.control_inventario and self.venta.embarque and not self.embarque_item:
             from embarques.models import EmbarqueItem
             try:
                 self.embarque_item = EmbarqueItem.objects.get(
@@ -340,7 +389,7 @@ class DetalleVenta(AuditModel):
                 # Así que debería estar en el embarque.
                 pass
 
-        if self.embarque_item:
+        if self.producto.control_inventario and self.embarque_item:
             with transaction.atomic():
                 # Bloquear el embarque_item para evitar concurrencia
                 from embarques.models import EmbarqueItem
@@ -403,7 +452,7 @@ class DetalleVenta(AuditModel):
         from django.db import transaction
         from productos.models import MovimientoInventario
         
-        if self.embarque_item:
+        if self.producto.control_inventario and self.embarque_item:
             with transaction.atomic():
                 from embarques.models import EmbarqueItem
                 emb_item = EmbarqueItem.objects.select_for_update().get(pk=self.embarque_item.pk)
@@ -427,6 +476,34 @@ class DetalleVenta(AuditModel):
                 )
         
         super().delete(*args, **kwargs)
+
+    def devolver_inventario_por_anulacion(self):
+        """
+        Devuelve las cantidades de este detalle al disponible del embarque.
+        Usado cuando la factura padre es anulada.
+        """
+        from productos.models import MovimientoInventario
+        if self.producto.control_inventario and self.embarque_item:
+            from embarques.models import EmbarqueItem
+            # Bloqueo para evitar inconsistencias
+            emb_item = EmbarqueItem.objects.select_for_update().get(pk=self.embarque_item_id)
+            
+            emb_item.cantidad_disponible_unidades += self.cantidad_unidades or 0
+            emb_item.cantidad_disponible_kg += self.cantidad_kg or 0
+            emb_item.cantidad_disponible_litros += self.cantidad_litros or 0
+            emb_item.save()
+
+            # Record revision movement
+            MovimientoInventario.objects.create(
+                producto=self.producto,
+                embarque=self.venta.embarque,
+                factura=self.venta,
+                tipo='ajuste_reversion',
+                cantidad_unidades=self.cantidad_unidades or 0,
+                cantidad_kg=self.cantidad_kg or 0,
+                cantidad_litros=self.cantidad_litros or 0,
+                descripcion=f"Anulación Factura {self.venta.factura}"
+            )
 
     def __str__(self):
         return f"{self.producto.nombre} x {self.cantidad} en {self.venta.factura}"

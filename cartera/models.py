@@ -146,7 +146,7 @@ class Pago(AuditModel):
         if self.pk:
             raise ValidationError("Los registros de pago son inmutables. No se permite editar un pago confirmado.")
 
-        if self.monto <= 0:
+        if self.monto is None or self.monto <= 0:
             raise ValidationError("El monto del pago debe ser mayor a 0.")
         
         # Sincronizar cliente desde la venta si no está puesto
@@ -157,17 +157,18 @@ class Pago(AuditModel):
         if self.referencia:
             self.referencia = self.referencia.strip().upper()
 
-        # 1. Validar que no exceda el saldo pendiente (considerando si es edición)
-        from decimal import Decimal
-        pagos_previos = self.venta.pagos.exclude(pk=self.pk).aggregate(
-            total=models.Sum('monto'))['total'] or Decimal('0.00')
-        
-        saldo_actual = self.venta.total_con_flete - pagos_previos
-        
-        if self.monto > saldo_actual:
-            raise ValidationError(
-                f"El monto del pago (${self.monto}) excede el saldo pendiente (${saldo_actual})."
-            )
+        # 1. Validar que no exceda el saldo pendiente (si hay venta y monto)
+        if self.venta and self.monto is not None:
+            from decimal import Decimal
+            pagos_previos = self.venta.pagos.exclude(pk=self.pk).aggregate(
+                total=models.Sum('monto'))['total'] or Decimal('0.00')
+            
+            saldo_actual = self.venta.total_con_flete - pagos_previos
+            
+            if self.monto > saldo_actual:
+                raise ValidationError(
+                    f"El monto del pago (${self.monto}) excede el saldo pendiente (${saldo_actual})."
+                )
 
         # 2. Validar duplicados por CLIENTE, FECHA y REFERENCIA (Nivel Senior)
         if self.referencia:

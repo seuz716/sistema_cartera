@@ -45,7 +45,7 @@ class VentaForm(forms.ModelForm):
         fields = [
             'factura', 'cliente', 'fecha',
             'embarque', 'conductor', 'total_embalajes_entregados', 'total_embalajes_devueltos',
-            'flete', 'descuentos', 'notas', 'total_embalajes_automatico',
+            'flete', 'flete_cobrado_al_cliente', 'descuentos', 'notas', 'total_embalajes_automatico',
         ]
         widgets = {
             'total_embalajes_entregados': forms.NumberInput(attrs={
@@ -89,7 +89,7 @@ class VentaForm(forms.ModelForm):
 class DetalleVentaForm(forms.ModelForm):
     class Meta:
         model = DetalleVenta
-        fields = ['producto', 'embarque_item', 'cantidad_unidades', 'cantidad_kg', 'cantidad_litros', 'precio_unitario', 'embalajes_entregados']
+        fields = ['producto', 'embarque_item', 'cantidad_unidades', 'cantidad_kg', 'cantidad_litros', 'precio_unitario', 'tajado', 'precio_tajado_unidad', 'embalajes_entregados']
         widgets = {
             'producto': forms.Select(attrs={
                 'class': 'form-select producto-select w-100',
@@ -113,6 +113,14 @@ class DetalleVentaForm(forms.ModelForm):
             }),
             'precio_unitario': forms.NumberInput(attrs={
                 'class': 'form-control rounded-3 border-light-subtle shadow-sm text-end',
+            }),
+            'tajado': forms.CheckboxInput(attrs={
+                'class': 'form-check-input ms-2',
+            }),
+            'precio_tajado_unidad': forms.NumberInput(attrs={
+                'class': 'form-control text-end small',
+                'placeholder': 'V. Tajado',
+                'step': '0.01'
             }),
             'embalajes_entregados': forms.NumberInput(attrs={
                 'class': 'form-control text-end qty-embalajes',

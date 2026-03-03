@@ -120,11 +120,11 @@
               <table class="table table-hover align-middle" style="min-width: 900px;">
                 <thead class="bg-light">
                   <tr class="small text-muted text-uppercase fw-bold border-bottom">
-                    <th style="width: 30%">Producto</th>
+                    <th style="width: 25%">Producto</th>
                     <th style="width: 15%" class="text-center">Cantidad</th>
-                    <th style="width: 12%" class="text-center">Embalajes</th>
+                    <th style="width: 10%" class="text-center">Tajado / Canastilla</th>
                     <th style="width: 15%" class="text-end">Precio Unit.</th>
-                    <th style="width: 13%" class="text-center">Disponible</th>
+                    <th style="width: 10%" class="text-center">Disponible</th>
                     <th style="width: 15%" class="text-end pe-3">Subtotal</th>
                     <th style="width: 5%"></th>
                   </tr>
@@ -143,7 +143,19 @@
                         <div class="field-qty-litros" style="display:none;">{{ det_form.cantidad_litros }}</div>
                       </div>
                     </td>
-                    <td class="py-3">{{ det_form.embalajes_entregados }}</td>
+                    <td class="py-3">
+                      <div class="d-flex align-items-center justify-content-center gap-1">
+                        <div class="form-check p-0 m-0" title="¿Requiere Tajado?">
+                          {{ det_form.tajado }}
+                        </div>
+                        <div class="v-tajado-input" style="width: 70px; display:none;">
+                          {{ det_form.precio_tajado_unidad }}
+                        </div>
+                        <div class="ms-2 border-start ps-2 fw-bold text-muted" title="Canastillas">
+                          {{ det_form.embalajes_entregados }}
+                        </div>
+                      </div>
+                    </td>
                     <td class="py-3">{{ det_form.precio_unitario }}</td>
                     <td class="py-3 text-center">
                       <span class="stock-info badge rounded-pill bg-light text-primary border border-primary-subtle">--</span>
@@ -193,11 +205,15 @@
                       >0</span
                     >
                   </div>
-                   <div
-                    class="d-flex justify-content-between align-items-center mb-2"
-                  >
-                    <span class="text-muted">Flete Transporte (-):</span>
-                    {{ form.flete }}
+                   <div class="mb-2">
+                    <div class="d-flex justify-content-between align-items-center">
+                      <span class="text-muted">Flete Transporte ({% if form.flete_cobrado_al_cliente.value %}+{% else %}-{% endif %}):</span>
+                      {{ form.flete }}
+                    </div>
+                    <div class="form-check form-switch small mt-1 d-flex justify-content-end align-items-center gap-2">
+                      <label class="form-check-label text-muted x-small" for="{{ form.flete_cobrado_al_cliente.id_for_label }}">¿Cobrar al cliente?</label>
+                      {{ form.flete_cobrado_al_cliente }}
+                    </div>
                   </div>
                   <div
                     class="d-flex justify-content-between align-items-center mb-3 border-bottom pb-2"
@@ -558,8 +574,24 @@
         
         const price = parseFloat(row.querySelector('[name$="-precio_unitario"]')?.value) || 0;
         
+        // --- Lógica ERP Tajado ---
+        const tajadoCheck = row.querySelector('[name$="-tajado"]');
+        const vTajadoInput = row.querySelector('[name$="-precio_tajado_unidad"]');
+        const vTajadoField = row.querySelector('.v-tajado-input');
+        
+        let subtotalTajado = 0;
+        if (tajadoCheck && tajadoCheck.checked) {
+            vTajadoField.style.display = 'block';
+            const vTajado = parseFloat(vTajadoInput?.value) || 0;
+            // El tajado se cobra por UNIDAD física
+            const units = parseFloat(row.querySelector('[name$="-cantidad_unidades"]')?.value) || 0;
+            subtotalTajado = units * vTajado;
+        } else {
+            vTajadoField.style.display = 'none';
+        }
+
         const rowTd = row.querySelector(".row-total");
-        const rowSum = qtyFacturada * price;
+        const rowSum = (qtyFacturada * price) + subtotalTajado;
         subtotal += rowSum;
         if (rowTd) rowTd.innerText = fmtMoney(rowSum);
 
@@ -579,8 +611,15 @@
 
       const flete = parseFloat(fleteInput?.value) || 0;
       const desc = parseFloat(descInput?.value) || 0;
-      // Tanto flete como descuentos se restan según lógica de negocio
-      const total = subtotal - flete - desc;
+      const fleteCobrado = document.querySelector('[name="flete_cobrado_al_cliente"]')?.checked;
+      
+      // Regla ERP: Flete suma si es cobrado, resta si es gasto asumido
+      let total = subtotal - desc;
+      if (fleteCobrado) {
+          total += flete;
+      } else {
+          total -= flete;
+      }
 
       if (subtotalDisp) subtotalDisp.innerText = fmtMoney(subtotal);
       if (finalDisplay) finalDisplay.innerText = fmtMoney(total < 0 ? 0 : total);
