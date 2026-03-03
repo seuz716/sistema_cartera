@@ -88,9 +88,38 @@ class AnalisisEstrategicoView(LoginRequiredMixin, View):
             return JsonResponse({"error": f"Error en análisis estratégico: {str(e)}"}, status=500)
 
 
+class QuickKPIView(LoginRequiredMixin, View):
+    """
+    Nuevo: Genera mini-KPIs contextuales para la vista actual.
+    """
+    def post(self, request):
+        try:
+            body = json.loads(request.body)
+            vista = body.get("vista", "general")
+            
+            ai = GeminiAIService()
+            if not ai.client:
+                return JsonResponse({"error": "IA no disponible"}, status=503)
+            
+            raw_result = ai.quick_kpi_analysis(vista)
+            try:
+                result_json = json.loads(raw_result)
+            except:
+                # Fallback por si la IA devuelve basura
+                result_json = {
+                    "kpis": [{"label": "Error", "value": "N/A", "icon": "bi-exclamation-triangle"}],
+                    "insight": "No se pudo procesar el análisis rápido."
+                }
+                
+            return JsonResponse(result_json)
+        except Exception as e:
+            return JsonResponse({"error": str(e)}, status=500)
+
+
 # -----------------------------------------
 #     CHAT IA CON CONTROL DE TOKENS
 # -----------------------------------------
+
 
 
 class ChatIAView(LoginRequiredMixin, View):
@@ -100,7 +129,7 @@ class ChatIAView(LoginRequiredMixin, View):
     def post(self, request):
         try:
             body = json.loads(request.body)
-            msg = body.get("message", "")
+            msg = body.get("message") or body.get("mensaje") or ""
             
             ai = GeminiAIService()
             # Si no hay cliente, devolvemos error amigable
@@ -131,7 +160,7 @@ class ChatIAView(LoginRequiredMixin, View):
             # Registrar tokens generados por IA
             register_tokens(output_tokens, method="real")
 
-            return JsonResponse({"reply": reply})
+            return JsonResponse({"reply": reply, "respuesta": reply})
 
         except Exception as e:
             return JsonResponse({"error": f"Error inesperado: {str(e)}"}, status=500)

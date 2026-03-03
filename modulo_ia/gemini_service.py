@@ -47,17 +47,25 @@ class GeminiAIService:
     # Prompt de sistema para el analisis estrategico de negocio.
     # ------------------------------------------------------------------
     SYSTEM_PROMPT_ESTRATEGICO = (
-        "Eres un Director Financiero (CFO) y Analista de Datos Senior. "
-        "Tu objetivo es realizar un ANALISIS ESTRATEGICO PROFUNDO del negocio basado en los datos de la base de datos propia.\n\n"
-        "REGLAS CRITICAS DE VISUALIZACIÓN:\n"
-        "1. FORMATO: Usa SIEMPRE HTML (Bootstrap). Texto justificado.\n"
-        "2. GRAFICOS (OBLIGATORIO - MINIMO 4): DEBES incluir exactamente estos gráficos usando <div class='chart-data' data-chart-type='...' data-values='...' data-labels='...'>:\n"
-        "   - Gráfico 1 (Líneas): 'Tendencia de Ventas (30 días)' usando los datos de 'tendencia_ventas'.\n"
-        "   - Gráfico 2 (Barras): 'Top 7 Clientes Deudores' (Riesgo de Cartera) usando 'top_deudores'.\n"
-        "   - Gráfico 3 (Líneas/Barras): 'Comparativa de Recaudo' usando 'tendencia_recaudo'.\n"
-        "   - Gráfico 4 (Circular/Pie): 'Distribución de Inventario Crítico' usando 'top_stock_productos'.\n"
-        "3. ESTRUCTURA: Resumen Ejecutivo, Diagnóstico de Liquidez, Análisis de Inventario y Plan de Acción.\n"
-        "4. DATOS: Extrae las cifras exactas del JSON proporcionado. No inventes datos.\n"
+        "Eres un Director Financiero (CFO) de élite. Tu tarea es generar un informe estratégico 'Premium' basado en datos internos.\n\n"
+        "REGLAS ESTRUCTURALES Y UX:\n"
+        "1. FORMATO: Devuelve SIEMPRE el contenido envuelto en <div class='ai-report-container'>.\n"
+        "2. DASHBOARD VISUAL: Usa <div class='dashboard-grid'> para agrupar gráficos.\n"
+        "3. GRÁFICOS (REQUERIDO): Inserta exactamente 4 bloques de gráfico con este formato:\n"
+        "   <div class='chart-container-card'>\n"
+        "       <div class='chart-label'>[TÍTULO DEL GRÁFICO]</div>\n"
+        "       <div class='chart-data' data-chart-type='[bar|line|pie]' data-values='[JSON_ARRAY]' data-labels='[JSON_ARRAY]'></div>\n"
+        "   </div>\n"
+        "4. CONTENIDO:\n"
+        "   - Títulos con <h3> y <h4>.\n"
+        "   - Texto JUSTIFICADO en <p>.\n"
+        "   - Usa <span class='metric-badge'> para resaltar cifras clave (ej: saldo total, variación %).\n\n"
+        "MÉTRICAS A GRAFICAR:\n"
+        "- 'tendencia_ventas': Gráfico de Líneas.\n"
+        "- 'top_deudores': Gráfico de Barras.\n"
+        "- 'tendencia_recaudo': Gráfico de Líneas.\n"
+        "- 'top_stock_productos': Gráfico de Torta (pie).\n\n"
+        "TONO: Directivo, analítico, sin rodeos. Evita frases genéricas. Habla sobre los datos reales provistos."
     )
 
     def __init__(self):
@@ -107,6 +115,34 @@ class GeminiAIService:
             f"{json.dumps(context, ensure_ascii=False, indent=2, default=str)}\n"
         )
         return self._safe_execute(prompt, "strategic_analysis")
+
+    # ------------------------------------------------------------------
+    # Prompt para Dashboards de vista (KPIs Rápidos)
+    # ------------------------------------------------------------------
+    SYSTEM_PROMPT_QUICK_KPI = (
+        "Eres un analista de datos de alto nivel. Tu tarea es generar 3 KPIs CLAVE y un INSIGHT BREVE (15 palabras máx) "
+        "para la vista actual del usuario.\n\n"
+        "REGLAS:\n"
+        "1. FORMATO: Devuelve un JSON con: {'kpis': [{'label': '...', 'value': '...', 'icon': 'bi-...'}], 'insight': '...'}.\n"
+        "2. ICONOS: Usa clases de Bootstrap Icons (bi-...). \n"
+        "3. LÓGICA: Sé preciso con los datos proporcionados."
+    )
+
+    def quick_kpi_analysis(self, view_context: str) -> str:
+        """Genera KPIs rápidos para un módulo específico."""
+        from .context_retriever import build_context
+        import json
+        
+        context = build_context()
+        prompt = (
+            f"{self.SYSTEM_PROMPT_QUICK_KPI}\n\n"
+            f"VISTA ACTUAL DEL USUARIO: {view_context}\n"
+            f"DATOS DISPONIBLES:\n{json.dumps(context, ensure_ascii=False, default=str)}\n"
+        )
+        # Forzar respuesta JSON limpia
+        res = self._safe_execute(prompt, "quick_kpi")
+        # Limpiar posibles bloques de código markdown o ruidos
+        return res.replace("```json", "").replace("```", "").strip()
 
     def chat_response(self, message: str) -> str:
         """Responde a un mensaje de chat con contexto del sistema de cartera."""

@@ -2,6 +2,7 @@ from django.db import models
 from django.core.exceptions import ValidationError
 from decimal import Decimal
 import math
+from simple_history.models import HistoricalRecords
 from clientes.models import Cliente
 from productos.models import Producto
 from core.models import AuditModel
@@ -135,6 +136,9 @@ class Venta(AuditModel):
 
     notas = models.TextField(blank=True, null=True)
 
+    # Auditoría Forense
+    history = HistoricalRecords()
+
     class Meta:
         verbose_name = "Venta"
         verbose_name_plural = "Ventas"
@@ -242,6 +246,8 @@ class DetalleVenta(AuditModel):
         max_digits=8, decimal_places=2, default=0,
         help_text="Canastillas calculadas para este item (Ej: 16 unds = 1 canastilla)"
     )
+
+    history = HistoricalRecords()
 
     def calcular_unidades_embalaje(self):
         """

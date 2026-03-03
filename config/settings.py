@@ -47,6 +47,9 @@ INSTALLED_APPS = [
 
     # Para API
     'rest_framework',
+    
+    # Auditoría
+    'simple_history',
 ]
 
 MIDDLEWARE = [
@@ -57,6 +60,9 @@ MIDDLEWARE = [
     'django.contrib.auth.middleware.AuthenticationMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
+    
+    # Auditoría
+    'simple_history.middleware.HistoryRequestMiddleware',
 ]
 
 ROOT_URLCONF = 'config.urls'

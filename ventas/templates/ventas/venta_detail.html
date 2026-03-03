@@ -194,6 +194,54 @@
             </div>
 
         </div>
+        </div>
+
+        <!-- Audit Trail (AuditModel + HistoricalRecords) -->
+        <div class="mt-5 no-print">
+            <div class="card border-0 shadow-sm rounded-4 overflow-hidden">
+                <div class="card-header bg-dark text-white py-3">
+                    <h5 class="mb-0"><i class="bi bi-clock-history me-2"></i> Auditoría Forense y Trazabilidad</h5>
+                </div>
+                <div class="card-body p-0">
+                    <div class="table-responsive">
+                        <table class="table table-sm table-hover mb-0 align-middle">
+                            <thead class="bg-light text-muted x-small text-uppercase">
+                                <tr>
+                                    <th class="ps-3 py-3">Fecha y Hora</th>
+                                    <th class="py-3">Usuario</th>
+                                    <th class="py-3">Acción</th>
+                                    <th class="py-3">Detalle del Cambio</th>
+                                </tr>
+                            </thead>
+                            <tbody class="small">
+                                {% for entry in historial %}
+                                <tr>
+                                    <td class="ps-3 py-3 text-muted">{{ entry.history_date|date:"d/m/Y H:i" }}</td>
+                                    <td class="py-3 fw-bold">{{ entry.history_user.get_full_name|default:entry.history_user.username }}</td>
+                                    <td class="py-3">
+                                        {% if entry.history_type == '+' %}
+                                            <span class="badge bg-success-subtle text-success">CREACIÓN</span>
+                                        {% elif entry.history_type == '~' %}
+                                            <span class="badge bg-primary-subtle text-primary">MODIFICACIÓN</span>
+                                        {% else %}
+                                            <span class="badge bg-danger-subtle text-danger">ELIMINACIÓN</span>
+                                        {% endif %}
+                                    </td>
+                                    <td class="py-3">
+                                        {% if forloop.first %}
+                                            <span class="text-primary fw-semibold">Estado Actual: {{ entry.get_estado_display }}</span>
+                                        {% else %}
+                                            Cambio detectado en registro histórico #{{ entry.history_id }}
+                                        {% endif %}
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
     </div>
 </div>
 

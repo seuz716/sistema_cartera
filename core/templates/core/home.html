@@ -2,141 +2,304 @@
 
 {% block title %}Dashboard - CarteraPro{% endblock %}
 
+{% block extra_css %}
+<style>
+    .ai-smart-card {
+        background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%);
+        border: none;
+        color: white;
+    }
+    .chart-box {
+        background: white;
+        border-radius: 16px;
+        box-shadow: 0 4px 12px rgba(0,0,0,0.05);
+    }
+    .stat-card {
+        transition: transform 0.3s ease;
+    }
+    .stat-card:hover {
+        transform: translateY(-5px);
+    }
+    .quick-link-btn {
+        border-radius: 12px;
+        transition: all 0.2s;
+    }
+    .quick-link-btn:hover {
+        filter: brightness(1.1);
+        transform: scale(1.02);
+    }
+    .ai-input-group {
+        background: rgba(255,255,255,0.1);
+        border: 1px solid rgba(255,255,255,0.2);
+        border-radius: 12px;
+        padding: 4px;
+    }
+    .ai-input-group input {
+        background: transparent;
+        border: none;
+        color: white;
+        box-shadow: none;
+    }
+    .ai-input-group input::placeholder {
+        color: rgba(255,255,255,0.5);
+    }
+    .ai-input-group input:focus {
+        background: transparent;
+        color: white;
+    }
+</style>
+{% endblock %}
+
 {% block content %}
 <div class="row g-4 mb-5">
-    <div class="col-12">
-        <h1 class="fw-bold text-dark">Panel de Control</h1>
-        <p class="text-muted">Bienvenido al sistema de gestión inteligente, {{ user.username|capfirst }}.</p>
+    <div class="col-12 d-flex justify-content-between align-items-center">
+        <div>
+            <h1 class="fw-bold text-dark mb-1">Panel de Control</h1>
+            <p class="text-muted"><i class="bi bi-calendar3 me-2"></i> {{ today|date:"l, d F Y" }}</p>
+        </div>
+        <div class="d-none d-md-block">
+            <span class="badge bg-success-subtle text-success border border-success px-3 py-2 rounded-pill">
+                <i class="bi bi-shield-check me-1"></i> Auditoría Forense Activa
+            </span>
+        </div>
     </div>
 
     <!-- Stats Row -->
-    <div class="col-md-3">
-        <div class="glass-card p-4 h-100 border-top border-4 border-primary">
+    <div class="col-md-4">
+        <div class="glass-card stat-card p-4 h-100 border-top border-4 border-primary">
             <div class="d-flex justify-content-between align-items-start">
                 <div>
-                    <h6 class="text-muted small text-uppercase fw-bold">Clientes</h6>
+                    <h6 class="text-muted small text-uppercase fw-bold">Cartera de Clientes</h6>
                     <h2 class="fw-bold">{{ total_clientes }}</h2>
+                    <p class="small text-success mb-0"><i class="bi bi-graph-up me-1"></i> Activos en sistema</p>
                 </div>
-                <div class="bg-primary bg-opacity-10 p-2 rounded-3 text-primary">
-                    <i class="bi bi-people fs-4"></i>
+                <div class="bg-primary bg-opacity-10 p-3 rounded-4 text-primary">
+                    <i class="bi bi-people fs-3"></i>
                 </div>
-            </div>
-            <div class="mt-3 small">
-                <a href="{% url 'clientes:cliente_list' %}" class="text-decoration-none fw-medium">Ver Directorio →</a>
             </div>
         </div>
     </div>
 
-    <div class="col-md-3">
-        <div class="glass-card p-4 h-100 border-top border-4 border-danger">
+    <div class="col-md-4">
+        <div class="glass-card stat-card p-4 h-100 border-top border-4 border-danger">
             <div class="d-flex justify-content-between align-items-start">
                 <div>
-                    <h6 class="text-muted small text-uppercase fw-bold">Cuentas por Cobrar</h6>
-                    <h2 class="fw-bold text-danger">${{ total_saldo }}</h2>
+                    <h6 class="text-muted small text-uppercase fw-bold">Pendiente de Cobro</h6>
+                    <h2 class="fw-bold text-danger">${{ total_saldo|floatformat:2 }}</h2>
+                    <p class="small text-danger mb-0"><i class="bi bi-exclamation-circle me-1"></i> Cartera total</p>
                 </div>
-                <div class="bg-danger bg-opacity-10 p-2 rounded-3 text-danger">
-                    <i class="bi bi-receipt fs-4"></i>
+                <div class="bg-danger bg-opacity-10 p-3 rounded-4 text-danger">
+                    <i class="bi bi-currency-dollar fs-3"></i>
                 </div>
-            </div>
-            <div class="mt-3 small">
-                <a href="{% url 'ventas:lista' %}" class="text-decoration-none text-danger fw-medium">Gestionar Saldos
-                    →</a>
             </div>
         </div>
     </div>
 
-    <div class="col-md-3">
-        <div class="glass-card p-4 h-100 border-top border-4 border-success">
+    <div class="col-md-4">
+        <div class="glass-card stat-card p-4 h-100 border-top border-4 border-success">
             <div class="d-flex justify-content-between align-items-start">
                 <div>
-                    <h6 class="text-muted small text-uppercase fw-bold">Recaudación Total</h6>
-                    <h2 class="fw-bold text-success">${{ total_recaudado }}</h2>
+                    <h6 class="text-muted small text-uppercase fw-bold">Recaudación (30d)</h6>
+                    <h2 class="fw-bold text-success">${{ total_recaudado|floatformat:2 }}</h2>
+                    <p class="small text-success mb-0"><i class="bi bi-check-all me-1"></i> Ingresos verificados</p>
                 </div>
-                <div class="bg-success bg-opacity-10 p-2 rounded-3 text-success">
-                    <i class="bi bi-wallet2 fs-4"></i>
+                <div class="bg-success bg-opacity-10 p-3 rounded-4 text-success">
+                    <i class="bi bi-piggy-bank fs-3"></i>
                 </div>
-            </div>
-            <div class="mt-3 small">
-                <a href="{% url 'cartera:lista' %}" class="text-decoration-none text-success fw-medium">Ver Historial
-                    Pagos →</a>
             </div>
         </div>
     </div>
+</div>
 
-    <div class="col-md-3">
-        <div class="glass-card p-4 h-100 border-top border-4 border-accent">
-            <div class="d-flex justify-content-between align-items-start">
-                <div>
-                    <h6 class="text-muted small text-uppercase fw-bold">Consultas IA</h6>
-                    <h2 class="fw-bold">Beta</h2>
-                </div>
-                <div class="bg-info bg-opacity-10 p-2 rounded-3 text-info">
-                    <i class="bi bi-robot fs-4"></i>
+<div class="row g-4 mb-5">
+    <!-- Main Activity Chart -->
+    <div class="col-lg-8">
+        <div class="chart-box p-4 h-100">
+            <div class="d-flex justify-content-between align-items-center mb-4">
+                <h5 class="fw-bold mb-0">Actividad Financiera Reciente</h5>
+                <div class="dropdown">
+                    <button class="btn btn-sm btn-light border" type="button" data-bs-toggle="dropdown">
+                        Últimos 30 días <i class="bi bi-chevron-down ms-1"></i>
+                    </button>
+                    <ul class="dropdown-menu">
+                        <li><a class="dropdown-item" href="#">7 días</a></li>
+                        <li><a class="dropdown-item" href="#">30 días</a></li>
+                    </ul>
                 </div>
             </div>
-            <div class="mt-3 small">
-                <a href="{% url 'ia_panel' %}" class="text-decoration-none text-info fw-medium">Chat con Gemini →</a>
+            <div id="activityChart" style="min-height: 350px;"></div>
+        </div>
+    </div>
+
+    <!-- AI Interactive Box -->
+    <div class="col-lg-4">
+        <div class="card ai-smart-card h-100 rounded-4 shadow-lg overflow-hidden">
+            <div class="card-body p-4 d-flex flex-column h-100">
+                <div class="mb-4">
+                    <h5 class="fw-bold d-flex align-items-center">
+                        <i class="bi bi-stars text-warning me-2"></i> Inteligencia Predictiva
+                    </h5>
+                    <p class="small opacity-75">Consulta tendencias, riesgos de pago o proyecciones de venta.</p>
+                </div>
+                
+                <div class="flex-grow-1" id="ai-home-result" style="font-size: 0.9rem;">
+                    <div class="bg-white bg-opacity-10 rounded-3 p-3 mb-3">
+                        <p class="mb-0 italic opacity-75">"¿Cuál es el cliente con mayor riesgo de mora esta semana?"</p>
+                    </div>
+                    <div class="bg-white bg-opacity-10 rounded-3 p-3">
+                        <p class="mb-0 italic opacity-75">"Proyecta las ventas para el próximo cierre de mes."</p>
+                    </div>
+                </div>
+
+                <div class="mt-4">
+                    <div class="ai-input-group d-flex align-items-center">
+                        <input type="text" id="ai-home-input" class="form-control" placeholder="Haz una pregunta financiera...">
+                        <button class="btn btn-primary rounded-3 px-3 mx-1" id="btn-ai-home-send">
+                            <i class="bi bi-arrow-right-short fs-4"></i>
+                        </button>
+                    </div>
+                    <div class="text-center mt-2">
+                        <span class="x-small opacity-50">Potenciado por CarteraPro AI</span>
+                    </div>
+                </div>
             </div>
         </div>
     </div>
 </div>
 
 <div class="row g-4">
-    <!-- Quick Actions -->
-    <div class="col-lg-4">
-        <div class="glass-card p-4 h-100 shadow-sm border-0">
-            <h5 class="fw-bold mb-4 border-bottom pb-2">Acciones Rápidas</h5>
-            <div class="d-grid gap-2">
-                <a href="{% url 'clientes:cliente_create' %}"
-                    class="btn btn-primary text-start p-3 d-flex align-items-center">
-                    <i class="bi bi-person-plus-fill fs-4 me-3"></i>
-                    <div>
-                        <div class="fw-bold">Registrar Cliente</div>
-                        <div class="small opacity-75">Añadir nuevo contacto comercial</div>
-                    </div>
-                </a>
-                <a href="{% url 'productos:crear' %}"
-                    class="btn btn-outline-dark text-start p-3 d-flex align-items-center border-light-subtle shadow-sm">
-                    <i class="bi bi-plus-circle fs-4 me-3 text-primary"></i>
-                    <div>
-                        <div class="fw-bold">Nuevo Producto</div>
-                        <div class="small opacity-75 text-muted">Añadir items al inventario</div>
-                    </div>
-                </a>
-                <a href="{% url 'embarques:crear' %}"
-                    class="btn btn-outline-dark text-start p-3 d-flex align-items-center border-light-subtle shadow-sm">
-                    <i class="bi bi-box-seam fs-4 me-3 text-success"></i>
-                    <div>
-                        <div class="fw-bold">Crear Embarque</div>
-                        <div class="small opacity-75 text-muted">Planificar nueva logística</div>
-                    </div>
+    <!-- Quick Access Links -->
+    <div class="col-12">
+        <h5 class="fw-bold mb-3">Accesos Prioritarios</h5>
+        <div class="row g-3">
+            <div class="col-md-3">
+                <a href="{% url 'ventas:crear' %}" class="btn btn-primary w-100 p-3 quick-link-btn text-start shadow-sm mb-2">
+                    <i class="bi bi-plus-circle-dotted fs-4 d-block mb-1"></i>
+                    <span class="fw-bold">Nueva Factura</span>
                 </a>
             </div>
-        </div>
-    </div>
-
-    <!-- Recent Activity Placeholder -->
-    <div class="col-lg-8">
-        <div class="glass-card h-100 shadow-sm border-0 overflow-hidden">
-            <div class="p-4 border-bottom bg-light d-flex align-items-center justify-content-between">
-                <h5 class="fw-bold mb-0">Estado del Sistema</h5>
-                <span class="badge bg-success-subtle text-success border border-success px-3 rounded-pill"><i
-                        class="bi bi-check-circle me-1"></i> Operativo</span>
+            <div class="col-md-3">
+                <a href="{% url 'cartera:registrar_recibo' %}" class="btn bg-white border w-100 p-3 quick-link-btn text-start shadow-sm mb-2 text-dark">
+                    <i class="bi bi-wallet2 fs-4 d-block mb-1 text-success"></i>
+                    <span class="fw-bold">Recibo de Caja</span>
+                </a>
             </div>
-            <div class="p-4">
-                <div class="text-center py-5">
-                    <i class="bi bi-bar-chart-line fs-1 text-muted opacity-25"></i>
-                    <h6 class="text-muted mt-3">Gráfico de actividad en desarrollo</h6>
-                    <p class="small text-muted">Las integraciones con Chart.js se añadirán en la próxima versión.</p>
-                </div>
+            <div class="col-md-3">
+                <a href="{% url 'embarques:lista' %}" class="btn bg-white border w-100 p-3 quick-link-btn text-start shadow-sm mb-2 text-dark">
+                    <i class="bi bi-truck fs-4 d-block mb-1 text-primary"></i>
+                    <span class="fw-bold">Logística Hoy</span>
+                </a>
+            </div>
+            <div class="col-md-3">
+                <a href="{% url 'ia_analisis' %}" class="btn bg-white border w-100 p-3 quick-link-btn text-start shadow-sm mb-2 text-dark">
+                    <i class="bi bi-bar-chart-line fs-4 d-block mb-1 text-accent"></i>
+                    <span class="fw-bold">Análisis Pro</span>
+                </a>
             </div>
         </div>
     </div>
 </div>
+{% endblock %}
 
-<style>
-    .border-accent {
-        border-top-color: var(--accent-color) !important;
-    }
-</style>
+{% block extra_js %}
+<!-- ApexCharts -->
+<script src="https://cdn.jsdelivr.net/npm/apexcharts"></script>
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        // --- 1. CONFIGURACIÓN DEL GRÁFICO ---
+        const options = {
+            series: [{
+                name: 'Ventas ($)',
+                data: {{ chart_ventas|safe }}
+            }, {
+                name: 'Recauadiación ($)',
+                data: {{ chart_pagos|safe }}
+            }],
+            chart: {
+                height: 350,
+                type: 'area',
+                toolbar: { show: false },
+                fontFamily: 'Inter, sans-serif'
+            },
+            colors: ['#3b82f6', '#10b981'],
+            dataLabels: { enabled: false },
+            stroke: { curve: 'smooth', width: 2 },
+            xaxis: {
+                type: 'datetime',
+                categories: {{ chart_labels|safe }},
+                labels: { style: { colors: '#64748b' } }
+            },
+            yaxis: {
+                labels: {
+                    style: { colors: '#64748b' },
+                    formatter: (val) => '$' + val.toLocaleString()
+                }
+            },
+            tooltip: {
+                x: { format: 'dd MMM yyyy' },
+            },
+            grid: { borderColor: '#f1f5f9' },
+            legend: { position: 'top', horizontalAlign: 'right' },
+            fill: {
+                type: 'gradient',
+                gradient: {
+                    shadeIntensity: 1,
+                    opacityFrom: 0.4,
+                    opacityTo: 0.05,
+                    stops: [0, 90, 100]
+                }
+            },
+        };
+
+        const chart = new ApexCharts(document.querySelector("#activityChart"), options);
+        chart.render();
+
+        // --- 2. IA INTERACTIVA DASHBOARD ---
+        const aiInput = document.getElementById('ai-home-input');
+        const aiBtn = document.getElementById('btn-ai-home-send');
+        const aiResult = document.getElementById('ai-home-result');
+
+        aiBtn.addEventListener('click', function() {
+            const query = aiInput.value.trim();
+            if (!query) return;
+
+            aiResult.innerHTML = `
+                <div class="text-center py-4">
+                    <div class="spinner-border spinner-border-sm text-white" role="status"></div>
+                    <div class="small mt-2 opacity-75">Gemini está analizando tu consulta...</div>
+                </div>
+            `;
+            aiInput.value = '';
+
+            fetch('/api/ia/chat/', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRFToken': '{{ csrf_token }}'
+                },
+                body: JSON.stringify({ mensaje: query })
+            })
+            .then(response => response.json())
+            .then(data => {
+                aiResult.innerHTML = `
+                    <div class="bg-white bg-opacity-10 rounded-3 p-3 mb-3 animate__animated animate__fadeIn">
+                        <div class="small fw-bold mb-1"><i class="bi bi-person me-1"></i> Tú</div>
+                        <div class="opacity-75">${query}</div>
+                    </div>
+                    <div class="bg-primary bg-opacity-25 rounded-3 p-3 animate__animated animate__fadeIn">
+                        <div class="small fw-bold mb-1 text-warning"><i class="bi bi-robot me-1"></i> IA Pro</div>
+                        <div class="ai-response-text">${data.respuesta}</div>
+                    </div>
+                `;
+            })
+            .catch(err => {
+                aiResult.innerHTML = `<div class="alert alert-danger small p-2">Error al conectar con el servidor de IA.</div>`;
+            });
+        });
+
+        aiInput.addEventListener('keypress', function(e) {
+            if (e.key === 'Enter') aiBtn.click();
+        });
+    });
+</script>
 {% endblock %}

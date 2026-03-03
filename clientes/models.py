@@ -1,8 +1,10 @@
 from django.db import models
-
+from simple_history.models import HistoricalRecords
 from core.models import AuditModel
 
 class Cliente(AuditModel):
+    # ...
+    history = HistoricalRecords()
     # Número único de identificación automático
     numero_unico = models.AutoField(primary_key=True)
     # Número de identificación proporcionado por el usuario

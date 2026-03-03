@@ -7,44 +7,63 @@
     .analysis-card {
         background: #ffffff;
         border-radius: 20px;
-        box-shadow: 0 10px 30px rgba(0, 0, 0, 0.05);
-        border: 1px solid #edf2f7;
+        box-shadow: 0 10px 40px rgba(0, 0, 0, 0.04);
+        border: 1px solid #f1f5f9;
+        transition: transform 0.3s ease;
     }
 
-    .textarea-custom {
-        border-radius: 12px;
-        border: 1.5px solid #e2e8f0;
+    .ai-report-container {
+        font-family: 'Outfit', 'Inter', sans-serif;
+        color: #334155;
+        line-height: 1.8;
+    }
+
+    .ai-report-container h3, .ai-report-container h4 {
+        color: #1e293b;
+        font-weight: 700;
+        margin-top: 1.5rem;
+        border-left: 4px solid #3b82f6;
+        padding-left: 1rem;
+    }
+
+    .ai-report-container p {
+        text-align: justify;
+        margin-bottom: 1.2rem;
+    }
+
+    .dashboard-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+        gap: 1.5rem;
+        margin: 2rem 0;
+    }
+
+    .chart-container-card {
         background: #f8fafc;
-        padding: 1.2rem;
-        font-family: 'Inter', sans-serif;
-        font-size: 1.05rem;
-        transition: all 0.2s;
+        border-radius: 16px;
+        padding: 1.5rem;
+        border: 1px solid #f1f5f9;
+        box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05);
     }
 
-    .textarea-custom:focus {
-        background: #fff;
-        border-color: var(--secondary-color);
-        box-shadow: 0 0 0 4px rgba(59, 130, 246, 0.1);
-    }
-
-    .result-box {
-        display: none;
-        background: #fff;
-        border-radius: 15px;
-        border-left: 5px solid var(--secondary-color);
-        padding: 2rem;
-        margin-top: 2rem;
-        box-shadow: 0 4px 15px rgba(0, 0, 0, 0.03);
-    }
-
-    .complexity-badge {
-        font-size: 0.8rem;
-        padding: 0.4rem 1rem;
-        border-radius: 30px;
-        background: #e0f2fe;
-        color: #0369a1;
+    .chart-label {
+        font-size: 0.9rem;
         font-weight: 600;
+        color: #64748b;
+        margin-bottom: 1rem;
+        text-transform: uppercase;
+        letter-spacing: 0.05em;
     }
+
+    .metric-badge {
+        padding: 0.25rem 0.75rem;
+        border-radius: 9999px;
+        font-size: 0.8rem;
+        font-weight: 600;
+        background: #dcfce7;
+        color: #166534;
+    }
+
 </style>
 {% endblock %}
 
@@ -113,37 +132,59 @@
 
     function renderCharts(container) {
         container.querySelectorAll('.chart-data').forEach(el => {
-            const ctx = document.createElement('canvas');
-            el.style.height = "300px";
-            el.appendChild(ctx);
+            const canvas = document.createElement('canvas');
+            el.innerHTML = ''; // Clear pulse or text
+            el.appendChild(canvas);
+            el.style.height = "320px";
+            el.style.marginBottom = "2rem";
 
             try {
-                new Chart(ctx, {
-                    type: el.dataset.chartType || 'bar',
+                const labels = JSON.parse(el.dataset.labels);
+                const values = JSON.parse(el.dataset.values);
+                const type = el.dataset.chartType || 'bar';
+
+                new Chart(canvas, {
+                    type: type,
                     data: {
-                        labels: JSON.parse(el.dataset.labels),
+                        labels: labels,
                         datasets: [{
-                            label: 'Métrica',
-                            data: JSON.parse(el.dataset.values),
-                            backgroundColor: [
-                                '#3b82f6', '#10b981', '#f59e0b', '#ef4444',
-                                '#8b5cf6', '#06b6d4', '#ec4899', '#64748b'
-                            ]
+                            data: values,
+                            backgroundColor: type === 'pie' 
+                                ? ['#3b82f6', '#10b981', '#f59e0b', '#ef4444', '#8b5cf6', '#06b6d4', '#ec4899']
+                                : '#3b82f6',
+                            borderColor: '#3b82f6',
+                            borderWidth: type === 'line' ? 3 : 0,
+                            borderRadius: 8,
+                            tension: 0.4, // Smooth lines
+                            fill: type === 'line'
                         }]
                     },
                     options: {
                         responsive: true,
                         maintainAspectRatio: false,
+                        animation: {
+                            duration: 2000,
+                            easing: 'easeOutQuart'
+                        },
                         plugins: {
-                            legend: { position: 'bottom' }
-                        }
+                            legend: { 
+                                display: type === 'pie',
+                                position: 'bottom',
+                                labels: { usePointStyle: true, font: { family: 'Outfit' } } 
+                            }
+                        },
+                        scales: type !== 'pie' ? {
+                            y: { beginAtZero: true, grid: { display: false } },
+                            x: { grid: { display: false } }
+                        } : {}
                     }
                 });
             } catch (error) {
-                console.error("Error renderizando el gráfico:", error);
+                console.error("Error renderizando gráfico:", error);
             }
         });
     }
+
 
     async function generarAnalisisEstrategico() {
         resultBox.style.display = "none";

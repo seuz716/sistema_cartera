@@ -1,5 +1,25 @@
 from django import forms
-from .models import Pago
+from .models import Pago, ReciboCaja
+
+
+class ReciboCajaForm(forms.ModelForm):
+    class Meta:
+        model = ReciboCaja
+        fields = ['cliente', 'fecha', 'monto_total', 'metodo_pago', 'referencia', 'notas']
+        widgets = {
+            'cliente': forms.Select(attrs={'class': 'form-select form-select-lg rounded-3 border-light-subtle shadow-sm'}),
+            'fecha': forms.DateInput(attrs={'type': 'date', 'class': 'form-control rounded-3 border-light-subtle shadow-sm'}),
+            'monto_total': forms.NumberInput(attrs={'class': 'form-control form-control-lg rounded-3 text-success fw-bold border-success shadow-sm', 'placeholder': '0.00'}),
+            'metodo_pago': forms.Select(attrs={'class': 'form-select rounded-3 border-light-subtle shadow-sm'}),
+            'referencia': forms.TextInput(attrs={'class': 'form-control rounded-3 border-light-subtle shadow-sm', 'placeholder': 'Ej: Transf #12345'}),
+            'notas': forms.Textarea(attrs={'class': 'form-control border-light-subtle shadow-sm', 'rows': 3}),
+        }
+
+    def clean_monto_total(self):
+        monto = self.cleaned_data.get('monto_total')
+        if monto is None or monto <= 0:
+            raise forms.ValidationError("El monto total debe ser mayor a 0.")
+        return monto
 
 
 class PagoForm(forms.ModelForm):

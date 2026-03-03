@@ -46,6 +46,12 @@ class VentaDetailView(LoginRequiredMixin, DetailView):
     model = Venta
     template_name = 'ventas/venta_detail.html'
 
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        # Traer el historial completo de la venta para auditoría forense
+        context['historial'] = self.object.history.all().order_by('-history_date')
+        return context
+
 
 # ─────────────────────────────────────────────
 # CONFIGURACIÓN DE FACTURAS (primer uso)
