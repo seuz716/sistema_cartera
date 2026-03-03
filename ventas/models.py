@@ -1,5 +1,7 @@
 from django.db import models
 from django.core.exceptions import ValidationError
+from decimal import Decimal
+import math
 from clientes.models import Cliente
 from productos.models import Producto
 from core.models import AuditModel
@@ -160,8 +162,6 @@ class Venta(AuditModel):
         relacionados, actualizando el estado de la factura (DEBE, PARCIAL, PAGADA).
         Usa select_for_update para prevenir race conditions.
         """
-        from decimal import Decimal
-        
         # 1. Bloqueo de fila para evitar que otro proceso pise el saldo
         # Refrescamos desde la DB para tener valores exactos
         venta = Venta.objects.select_for_update().get(pk=self.pk)
@@ -191,7 +191,15 @@ class Venta(AuditModel):
                 venta.estado = "DEBE"
             
         # 5. Sincronizar Embalajes (Nivel Banco: Cuadre físico vs Pago Transportador)
-        if venta.total_embalajes_automatico:
+        # PROTECCIÓN HISTÓRICA: Solo recalculamos si el embarque permite cambios (Programado/Cargando)
+        # o si no tiene embarque aún. Si ya está EN_RUTA o superior, el dato es INMUTABLE.
+        # EXCEPCIÓN: Si el total actual es 0, permitimos la primera sincronización.
+        puedo_recalcular = True
+        if venta.embarque and venta.embarque.estado not in ['PROGRAMADO', 'CARGANDO']:
+             if venta.total_embalajes_entregados > 0:
+                puedo_recalcular = False
+
+        if venta.total_embalajes_automatico and puedo_recalcular:
             total_emb = Decimal('0')
             for det in venta.detalles.all():
                 det.calcular_unidades_embalaje() 
@@ -248,20 +256,31 @@ class DetalleVenta(AuditModel):
         capacidad = CapacidadEmbalaje.objects.filter(producto=self.producto).first()
         
         if capacidad and capacidad.unidades_por_paquete > 0:
-            # Cálculo: unidades / capacidad = canastillas (redondeo hacia arriba)
-            self.embalajes_entregados = Decimal(str(math.ceil(self.unidades_entregadas / capacidad.unidades_por_paquete)))
+            # Decidimos qué base usar para el cálculo
+            base_calculo = Decimal('0')
+            if capacidad.metodo_calculo == 'UNIDADES':
+                # Base: unidades físicas (bloques, bolsas)
+                base_calculo = Decimal(str(self.unidades_entregadas))
+            else:
+                # Base: cantidad comercial (Kg, Litros)
+                base_calculo = self.cantidad_facturada
+
+            # Cálculo: base / capacidad = embalajes (redondeo hacia arriba)
+            self.embalajes_entregados = Decimal(str(math.ceil(base_calculo / capacidad.unidades_por_paquete)))
         else:
-            # Si no hay configuración, no podemos estimar automáticamente (se deja en 0 o manual)
+            # Si no hay configuración, mantenemos lo que hay (o 0)
             pass
-        
-        # Guardado parcial para que actualizar_totales lo vea
-        DetalleVenta.objects.filter(pk=self.pk).update(embalajes_entregados=self.embalajes_entregados)
 
     def save(self, *args, **kwargs):
         # Para evitar problemas con datos antiguos, si cantidad_facturada no se envía, asumimos unidades
         if not self.cantidad_facturada:
-             self.cantidad_facturada = self.unidades_entregadas
+             self.cantidad_facturada = Decimal(str(self.unidades_entregadas))
         self.precio_total = self.cantidad_facturada * self.precio_unitario
+
+        # Si es un registro nuevo y la venta permite cálculo automático, lo hacemos aquí la primera vez
+        if not self.pk and self.venta.total_embalajes_automatico:
+            self.calcular_unidades_embalaje()
+
         super().save(*args, **kwargs)
 
     def __str__(self):

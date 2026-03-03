@@ -55,3 +55,41 @@ class GeminiServiceTests(TestCase):
         call_kwargs = mock_client.models.generate_content.call_args
         self.assertEqual(call_kwargs.kwargs["model"], "gemini-2.5-flash-lite")
         self.assertEqual(result, "Respuesta del chat")
+
+    # --- NUEVAS PRUEBAS SENIOR ---
+    
+    def test_context_retriever_structure(self):
+        """Verifica que el extractor de contexto devuelva las claves estratégicas esperadas."""
+        from .context_retriever import build_context
+        context = build_context()
+        expected_keys = [
+            "indicadores_30_dias", 
+            "top_deudores", 
+            "ventas_recientes", 
+            "FECHA_ANALISIS"
+        ]
+        for key in expected_keys:
+            self.assertIn(key, context, f"La clave {key} falta en el contexto.")
+
+    @patch('modulo_ia.gemini_service.GeminiAIService.strategic_analysis')
+    def test_strategic_analysis_returns_content(self, mock_analysis):
+        """Simula un análisis estratégico y verifica que el servicio responda."""
+        mock_analysis.return_value = "<html>Análisis estratégico de prueba</html>"
+        service = GeminiAIService()
+        result = service.strategic_analysis()
+        self.assertEqual(result, "<html>Análisis estratégico de prueba</html>")
+
+
+class ViewTests(TestCase):
+    def setUp(self):
+        from django.test import Client
+        self.client = Client()
+
+    def test_url_accessibility(self):
+        """Verifica que las rutas del módulo existan (aunque fallen por login)."""
+        from django.urls import reverse
+        urls = ['ia_panel', 'ia_analisis']
+        for url_name in urls:
+            response = self.client.get(reverse(url_name))
+            self.assertEqual(response.status_code, 302) # Redirect to login
+

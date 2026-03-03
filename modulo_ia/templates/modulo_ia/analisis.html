@@ -54,38 +54,32 @@
         <div class="d-flex align-items-center justify-content-between mb-4">
             <div>
                 <h2 class="fw-bold m-0 text-primary">
-                    <i class="bi bi-graph-up-arrow me-2"></i> Análisis Inteligente de Cartera
+                    <i class="bi bi-graph-up-arrow me-2"></i> Análisis de Estrategia & Riesgo
                 </h2>
-                <p class="text-muted m-0">Inyecta datos comerciales y recibe sugerencias estratégicas.</p>
+                <p class="text-muted m-0">Genera reportes ejecutivos basados en el estado actual de tu base de datos.</p>
+            </div>
+            <div>
+                <button id="strategic-btn" onclick="generarAnalisisEstrategico()" class="btn btn-success btn-lg rounded-pill shadow-sm">
+                    <i class="bi bi-magic me-2"></i> Análisis Estratégico (Auto)
+                </button>
             </div>
         </div>
 
         <div class="analysis-card p-5">
             <div class="mb-4">
                 <label class="form-label fw-bold mb-3 d-flex align-items-center text-dark">
-                    <i class="bi bi-file-earmark-text me-2 text-primary"></i> Datos a analizar
-                    <span class="ms-2 badge bg-light text-muted border fw-normal" style="font-size: 0.7rem;">JSON,
-                        Texto, Listas</span>
+                    <i class="bi bi-file-earmark-text me-2 text-primary"></i> Análisis Manual (Opcional)
+                    <span class="ms-2 badge bg-light text-muted border fw-normal" style="font-size: 0.7rem;">JSON, Texto, Listas</span>
                 </label>
-                <textarea id="data-input" class="form-control textarea-custom mb-4" rows="10"
-                    placeholder="Pega aquí los datos de facturas, clientes o proveedores..."></textarea>
+                <textarea id="data-input" class="form-control textarea-custom mb-4" rows="6"
+                    placeholder="Pega aquí datos específicos si deseas un análisis puntual..."></textarea>
             </div>
 
             <div class="row align-items-center g-4">
-                <div class="col-md-6">
-                    <label class="form-label fw-semibold text-dark mb-2">
-                        <i class="bi bi-cpu me-2"></i> Profundidad del análisis
-                    </label>
-                    <select id="complexity"
-                        class="form-select form-select-lg rounded-pill border-light-subtle shadow-sm px-4">
-                        <option value="standard" selected>Análisis Estándar (Rápido)</option>
-                        <option value="complex">Análisis Complejo (Flash Thinkinglite)</option>
-                    </select>
-                </div>
-                <div class="col-md-6 d-grid pt-lg-4">
+                <div class="col-md-12 d-grid">
                     <button id="analyze-btn" onclick="enviarDatos()"
-                        class="btn btn-primary btn-lg rounded-pill py-3 shadow">
-                        <i class="bi bi-lightning-charge-fill me-2"></i> Iniciar Análisis con IA
+                        class="btn btn-outline-primary btn-lg rounded-pill py-3">
+                        <i class="bi bi-lightning-charge me-2"></i> Analizar Texto Ingresado
                     </button>
                 </div>
             </div>
@@ -98,9 +92,9 @@
 
             <!-- Result -->
             <div id="result-box" class="result-box">
-                <div class="d-flex align-items-center mb-3">
+                <div class="d-flex align-items-center mb-4">
                     <h4 class="fw-bold m-0 text-dark">
-                        <i class="bi bi-check-circle-fill text-success me-2"></i> Reporte Concluido
+                        <i class="bi bi-clipboard-data-fill text-primary me-2"></i> Resultado del Análisis IA
                     </h4>
                 </div>
                 <div id="result-content" class="lh-lg text-secondary"></div>
@@ -111,15 +105,81 @@
 {% endblock %}
 
 {% block extra_js %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 <script>
+    const loading = document.getElementById("loading");
+    const resultBox = document.getElementById("result-box");
+    const resultContent = document.getElementById("result-content");
+
+    function renderCharts(container) {
+        container.querySelectorAll('.chart-data').forEach(el => {
+            const ctx = document.createElement('canvas');
+            el.style.height = "300px";
+            el.appendChild(ctx);
+
+            try {
+                new Chart(ctx, {
+                    type: el.dataset.chartType || 'bar',
+                    data: {
+                        labels: JSON.parse(el.dataset.labels),
+                        datasets: [{
+                            label: 'Métrica',
+                            data: JSON.parse(el.dataset.values),
+                            backgroundColor: [
+                                '#3b82f6', '#10b981', '#f59e0b', '#ef4444',
+                                '#8b5cf6', '#06b6d4', '#ec4899', '#64748b'
+                            ]
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        plugins: {
+                            legend: { position: 'bottom' }
+                        }
+                    }
+                });
+            } catch (error) {
+                console.error("Error renderizando el gráfico:", error);
+            }
+        });
+    }
+
+    async function generarAnalisisEstrategico() {
+        resultBox.style.display = "none";
+        loading.classList.remove("d-none");
+        document.getElementById("strategic-btn").disabled = true;
+
+        try {
+            const response = await fetch("{% url 'ia_analizar_estrategico' %}", {
+                method: "POST",
+                headers: {
+                    "Content-Type": "application/json",
+                    "X-CSRFToken": "{{ csrf_token }}"
+                }
+            });
+
+            const json = await response.json();
+            loading.classList.add("d-none");
+            document.getElementById("strategic-btn").disabled = false;
+            resultBox.style.display = "block";
+
+            if (json.result) {
+                resultContent.innerHTML = json.result;
+                renderCharts(resultContent);
+            } else {
+                resultContent.innerHTML = "<span class='text-danger'>❌ Error: " + (json.error || "No se pudo procesar.") + "</span>";
+            }
+        } catch (err) {
+            loading.classList.add("d-none");
+            document.getElementById("strategic-btn").disabled = false;
+            resultBox.style.display = "block";
+            resultContent.innerHTML = "<p class='text-danger'>❌ Error al conectar con el servidor.</p>";
+        }
+    }
+
     async function enviarDatos() {
         const dataInput = document.getElementById("data-input").value.trim();
-        const complexity = document.getElementById("complexity").value;
-        const loading = document.getElementById("loading");
-        const resultBox = document.getElementById("result-box");
-        const resultContent = document.getElementById("result-content");
-        const analyzeBtn = document.getElementById("analyze-btn");
-
         if (!dataInput) {
             alert("Por favor ingresa datos para analizar.");
             return;
@@ -127,7 +187,7 @@
 
         resultBox.style.display = "none";
         loading.classList.remove("d-none");
-        analyzeBtn.disabled = true;
+        document.getElementById("analyze-btn").disabled = true;
 
         try {
             const response = await fetch("{% url 'ia_analizar' %}", {
@@ -136,16 +196,12 @@
                     "Content-Type": "application/json",
                     "X-CSRFToken": "{{ csrf_token }}"
                 },
-                body: JSON.stringify({
-                    data: dataInput,
-                    complexity: complexity
-                })
+                body: JSON.stringify({ data: dataInput })
             });
 
             const json = await response.json();
-
             loading.classList.add("d-none");
-            analyzeBtn.disabled = false;
+            document.getElementById("analyze-btn").disabled = false;
             resultBox.style.display = "block";
 
             if (json.result) {
@@ -155,9 +211,9 @@
             }
         } catch (err) {
             loading.classList.add("d-none");
-            analyzeBtn.disabled = false;
+            document.getElementById("analyze-btn").disabled = false;
             resultBox.style.display = "block";
-            resultContent.innerHTML = "<p class='text-red-600'>❌ Error al conectar con el servidor.</p>";
+            resultContent.innerHTML = "<p class='text-danger'>❌ Error al conectar con el servidor.</p>";
         }
     }
 </script>

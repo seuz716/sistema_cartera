@@ -43,6 +43,23 @@ class GeminiAIService:
         "7. Sé conciso, analítico y profesional.\n"
     )
 
+    # ------------------------------------------------------------------
+    # Prompt de sistema para el analisis estrategico de negocio.
+    # ------------------------------------------------------------------
+    SYSTEM_PROMPT_ESTRATEGICO = (
+        "Eres un Director Financiero (CFO) y Analista de Datos Senior. "
+        "Tu objetivo es realizar un ANALISIS ESTRATEGICO PROFUNDO del negocio basado en los datos de la base de datos propia.\n\n"
+        "REGLAS CRITICAS DE VISUALIZACIÓN:\n"
+        "1. FORMATO: Usa SIEMPRE HTML (Bootstrap). Texto justificado.\n"
+        "2. GRAFICOS (OBLIGATORIO - MINIMO 4): DEBES incluir exactamente estos gráficos usando <div class='chart-data' data-chart-type='...' data-values='...' data-labels='...'>:\n"
+        "   - Gráfico 1 (Líneas): 'Tendencia de Ventas (30 días)' usando los datos de 'tendencia_ventas'.\n"
+        "   - Gráfico 2 (Barras): 'Top 7 Clientes Deudores' (Riesgo de Cartera) usando 'top_deudores'.\n"
+        "   - Gráfico 3 (Líneas/Barras): 'Comparativa de Recaudo' usando 'tendencia_recaudo'.\n"
+        "   - Gráfico 4 (Circular/Pie): 'Distribución de Inventario Crítico' usando 'top_stock_productos'.\n"
+        "3. ESTRUCTURA: Resumen Ejecutivo, Diagnóstico de Liquidez, Análisis de Inventario y Plan de Acción.\n"
+        "4. DATOS: Extrae las cifras exactas del JSON proporcionado. No inventes datos.\n"
+    )
+
     def __init__(self):
         self.api_key = os.getenv("GEMINI_API_KEY")
         if not self.api_key:
@@ -74,9 +91,22 @@ class GeminiAIService:
         return response.text
 
     def analyze_data(self, data_context: str) -> str:
-        """Analiza datos de cartera usando el prompt especializado de analisis."""
+        """Analiza datos externos pegados por el usuario."""
         prompt = f"{self.SYSTEM_PROMPT_ANALISIS}\n\nDATOS A ANALIZAR:\n{data_context}"
         return self._safe_execute(prompt, "analyze_data")
+
+    def strategic_analysis(self) -> str:
+        """Realiza un analisis profundo basado en toda la base de datos (contexto)."""
+        from .context_retriever import build_context
+        import json
+        
+        context = build_context()
+        prompt = (
+            f"{self.SYSTEM_PROMPT_ESTRATEGICO}\n\n"
+            f"=== DATOS DE LA BASE DE DATOS PROPIA ===\n"
+            f"{json.dumps(context, ensure_ascii=False, indent=2, default=str)}\n"
+        )
+        return self._safe_execute(prompt, "strategic_analysis")
 
     def chat_response(self, message: str) -> str:
         """Responde a un mensaje de chat con contexto del sistema de cartera."""
@@ -108,3 +138,4 @@ class GeminiAIService:
             return f"Error de la API de Gemini: {e}"
         except Exception as e:
             return f"Error inesperado de IA: {e}"
+

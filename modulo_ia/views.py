@@ -53,12 +53,15 @@ def chat_frontend(request):
 
 class AnalizarDatosView(LoginRequiredMixin, View):
     """
-    Vista funcional para analizar datos usando JSON estándar.
+    Vista para analizar datos externos proporcionados por el usuario.
     """
     def post(self, request):
         try:
             body = json.loads(request.body)
             data_context = body.get("data", "")
+
+            if not data_context:
+                return JsonResponse({"error": "No se proporcionaron datos para analizar."}, status=400)
 
             ai = GeminiAIService()
             result = ai.analyze_data(data_context)
@@ -69,9 +72,26 @@ class AnalizarDatosView(LoginRequiredMixin, View):
             return JsonResponse({"error": str(e)}, status=500)
 
 
+class AnalisisEstrategicoView(LoginRequiredMixin, View):
+    """
+    Nuevo: Realiza un análisis estratégico automático de la base de datos propia.
+    """
+    def post(self, request):
+        try:
+            ai = GeminiAIService()
+            if not ai.client:
+                return JsonResponse({"error": "Servicio de IA no disponible."}, status=503)
+            
+            result = ai.strategic_analysis()
+            return JsonResponse({"result": result})
+        except Exception as e:
+            return JsonResponse({"error": f"Error en análisis estratégico: {str(e)}"}, status=500)
+
+
 # -----------------------------------------
 #     CHAT IA CON CONTROL DE TOKENS
 # -----------------------------------------
+
 
 class ChatIAView(LoginRequiredMixin, View):
     """

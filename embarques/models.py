@@ -69,9 +69,20 @@ class TipoEmbalaje(models.Model):
 
 
 class CapacidadEmbalaje(models.Model):
+    METODO_CHOICES = [
+        ('UNIDADES', 'Contar unidades físicas (bloques, bolsas)'),
+        ('CANTIDAD', 'Contar cantidad facturada (Kg, Litros)'),
+    ]
     producto = models.ForeignKey('productos.Producto', on_delete=models.CASCADE, related_name="capacidades_embalaje")
     tipo_embalaje = models.ForeignKey(TipoEmbalaje, on_delete=models.CASCADE)
-    unidades_por_paquete = models.PositiveIntegerField(help_text="Ej: 16 unidades de queso por canastilla")
+    unidades_por_paquete = models.DecimalField(
+        max_digits=12, decimal_places=4, 
+        help_text="Ej: 16 unidades o 38.5 kg por canastilla"
+    )
+    metodo_calculo = models.CharField(
+        max_length=15, choices=METODO_CHOICES, default='UNIDADES',
+        help_text="Decide si el cálculo se hace por unidades físicas o por cantidad comercial"
+    )
 
     class Meta:
         unique_together = ('producto', 'tipo_embalaje')
