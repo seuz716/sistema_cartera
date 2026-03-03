@@ -110,6 +110,12 @@ class Venta(AuditModel):
     total = models.DecimalField(max_digits=12, decimal_places=2, default=0)
     total_con_flete = models.DecimalField(max_digits=12, decimal_places=2, default=0)
 
+    # Automatización de Embalajes (Nivel Banco)
+    total_embalajes_automatico = models.BooleanField(
+        default=True, 
+        help_text="Si está activo, el sistema estima las canastillas según la configuración del producto"
+    )
+
     # Cartera
     abono = models.DecimalField(max_digits=12, decimal_places=2, default=0)
     saldo = models.DecimalField(max_digits=12, decimal_places=2, default=0)
@@ -184,7 +190,15 @@ class Venta(AuditModel):
             else:
                 venta.estado = "DEBE"
             
-        # 5. Guardar cambios
+        # 5. Sincronizar Embalajes (Nivel Banco: Cuadre físico vs Pago Transportador)
+        if venta.total_embalajes_automatico:
+            total_emb = Decimal('0')
+            for det in venta.detalles.all():
+                det.calcular_unidades_embalaje() 
+                total_emb += Decimal(str(det.embalajes_entregados))
+            venta.total_embalajes_entregados = int(total_emb)
+
+        # 6. Guardar cambios
         venta.save()
         
         # 6. Sincronizar el objeto actual en memoria
@@ -213,6 +227,35 @@ class DetalleVenta(AuditModel):
     
     precio_unitario = models.DecimalField(max_digits=12, decimal_places=2)
     precio_total = models.DecimalField(max_digits=12, decimal_places=2, editable=False)
+
+    # Relación con el transporte (Nivel Banco)
+    # Cuántas canastillas/unidades logísticas ocupa este item
+    embalajes_entregados = models.DecimalField(
+        max_digits=8, decimal_places=2, default=0,
+        help_text="Canastillas calculadas para este item (Ej: 16 unds = 1 canastilla)"
+    )
+
+    def calcular_unidades_embalaje(self):
+        """
+        Calcula cuántas canastillas (o unidad logística) ocupa este detalle.
+        Si el producto tiene una CapacidadEmbalaje configurada, usa esa base.
+        """
+        from embarques.models import CapacidadEmbalaje
+        import math
+        
+        # Intentamos obtener la capacidad estándar (asumiendo 'Canastilla' como base si hay varias)
+        # O la primera que encuentre para el producto.
+        capacidad = CapacidadEmbalaje.objects.filter(producto=self.producto).first()
+        
+        if capacidad and capacidad.unidades_por_paquete > 0:
+            # Cálculo: unidades / capacidad = canastillas (redondeo hacia arriba)
+            self.embalajes_entregados = Decimal(str(math.ceil(self.unidades_entregadas / capacidad.unidades_por_paquete)))
+        else:
+            # Si no hay configuración, no podemos estimar automáticamente (se deja en 0 o manual)
+            pass
+        
+        # Guardado parcial para que actualizar_totales lo vea
+        DetalleVenta.objects.filter(pk=self.pk).update(embalajes_entregados=self.embalajes_entregados)
 
     def save(self, *args, **kwargs):
         # Para evitar problemas con datos antiguos, si cantidad_facturada no se envía, asumimos unidades

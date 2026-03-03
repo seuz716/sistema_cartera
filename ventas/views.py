@@ -117,6 +117,18 @@ def embarque_conductor_json(request, pk):
     })
 
 
+@login_required
+def producto_empaque_json(request, pk):
+    """
+    Devuelve la capacidad de embalaje por defecto del producto.
+    """
+    from embarques.models import CapacidadEmbalaje
+    capacidad = CapacidadEmbalaje.objects.filter(producto_id=pk).first()
+    return JsonResponse({
+        'unidades_por_paquete': capacidad.unidades_por_paquete if capacidad else 0
+    })
+
+
 # ─────────────────────────────────────────────
 # CREAR VENTA
 # ─────────────────────────────────────────────
@@ -190,4 +202,5 @@ def venta_create(request):
         'form': form,
         'formset': formset,
         'proxima_factura': proxima_factura,
+        'productos_list': Producto.objects.filter(activo=True),
     })

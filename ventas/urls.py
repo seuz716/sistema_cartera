@@ -11,4 +11,5 @@ urlpatterns = [
     path('<int:pk>/', views.VentaDetailView.as_view(), name='detalle'),
     # AJAX: datos del embarque (conductor, vehículo, placa)
     path('api/embarque/<int:pk>/conductor/', views.embarque_conductor_json, name='embarque_conductor'),
+    path('api/producto/<int:pk>/empaque/', views.producto_empaque_json, name='producto_empaque'),
 ]

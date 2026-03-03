@@ -33,7 +33,7 @@ class VentaForm(forms.ModelForm):
         fields = [
             'factura', 'cliente', 'fecha',
             'embarque', 'conductor', 'total_embalajes_entregados', 'total_embalajes_devueltos',
-            'flete', 'descuentos', 'notas',
+            'flete', 'descuentos', 'notas', 'total_embalajes_automatico',
         ]
         widgets = {
             'fecha': forms.DateInput(attrs={
@@ -70,17 +70,23 @@ class VentaForm(forms.ModelForm):
 class DetalleVentaForm(forms.ModelForm):
     class Meta:
         model = DetalleVenta
-        fields = ['producto', 'unidades_entregadas', 'cantidad_facturada', 'precio_unitario']
+        fields = ['producto', 'unidades_entregadas', 'embalajes_entregados', 'cantidad_facturada', 'precio_unitario']
         widgets = {
             'producto': forms.Select(attrs={
                 'class': 'form-select producto-select w-100',
                 'data-placeholder': 'Seleccione o busque un producto'
             }),
             'unidades_entregadas': forms.NumberInput(attrs={
-                'class': 'form-control text-end',
+                'class': 'form-control text-end qty-unidades',
                 'min': '1', 'step': '1',
                 'placeholder': 'Ej. 5',
                 'title': 'Unidades físicas entregadas'
+            }),
+            'embalajes_entregados': forms.NumberInput(attrs={
+                'class': 'form-control text-end qty-embalajes',
+                'min': '0', 'step': '1',
+                'placeholder': 'Can.',
+                'title': 'Canastillas (embalajes)'
             }),
             'cantidad_facturada': forms.NumberInput(attrs={
                 'class': 'form-control rounded-3 border-light-subtle shadow-sm text-center',
