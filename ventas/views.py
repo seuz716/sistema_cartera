@@ -8,6 +8,7 @@ from django.contrib import messages
 from django.http import JsonResponse
 
 from .models import Venta, DetalleVenta, ConfiguracionFactura, generar_consecutivo
+from productos.models import Producto
 from .forms import VentaForm, DetalleVentaFormSet
 from embarques.models import Embarque
 
