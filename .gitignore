@@ -15,3 +15,10 @@ estructura.txt
 test_render*.py
 tests/integration/
 tests/unit/
+
+# AI and Temporary scripts
+token_usage.json
+scenario_test.py
+test_flow.py
+unit_tests.py
+embarques/test_inventory_refactor.py

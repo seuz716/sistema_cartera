@@ -8,11 +8,10 @@ def manejar_stock_y_totales_save(sender, instance, created, **kwargs):
     from .models import Venta
     from productos.models import Producto
     
-    # 1. Actualizar Inventario
-    if created and instance.producto.control_inventario:
-        Producto.objects.filter(pk=instance.producto.pk).update(
-            stock_actual=F('stock_actual') - instance.cantidad
-        )
+    # 1. Actualizar Inventario (Warehouse)
+    # NOTA: En el nuevo modelo, la Venta descuenta del INVENTARIO EN TRÁNSITO del Embarque.
+    # El stock del almacén (Producto.stock_actual) ya fue descontado al confirmar el embarque.
+    pass
     
     # 2. Actualizar Totales de la Venta
     # Usamos transaction.on_commit para asegurar que el guardado del detalle terminó
@@ -23,11 +22,11 @@ def manejar_stock_y_totales_save(sender, instance, created, **kwargs):
 def manejar_stock_y_totales_delete(sender, instance, **kwargs):
     from productos.models import Producto
     
-    # 1. Devolver Inventario
-    if instance.producto.control_inventario:
-        Producto.objects.filter(pk=instance.producto.pk).update(
-            stock_actual=F('stock_actual') + instance.cantidad
-        )
+    # 1. Devolver Inventario (Warehouse)
+    # NOTA: En el nuevo modelo, al eliminar un detalle de venta, el inventario debe retornar 
+    # a la DISPONIBILIDAD del Embarque (esto se maneja en DetalleVenta.delete() o similar).
+    # No afecta al stock_actual del almacén directamente.
+    pass
     
     # 2. Recalcular Totales
     instance.venta.actualizar_totales()

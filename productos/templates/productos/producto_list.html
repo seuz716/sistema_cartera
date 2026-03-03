@@ -206,7 +206,7 @@
                 </div>
 
                 <div class="stock-badge {% if producto.stock_actual > 0 %}stock-ok{% else %}stock-none{% endif %}">
-                    {{ producto.stock_actual }} {{ producto.get_unidad_medida_display }}
+                    {{ producto.stock_actual }} {{ producto.get_tipo_medida_display }}
                 </div>
 
                 <div class="action-overlay">

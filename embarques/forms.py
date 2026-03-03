@@ -5,8 +5,9 @@ from django.forms import inlineformset_factory
 
 from .models import (
     Embarque, 
-    EmbarqueCarga, 
+    EmbarqueItem, 
     GastoEmbarque, 
+    NovedadEmbarque,
     Ruta, 
     Vehiculo, 
     Transportador, 
@@ -22,8 +23,8 @@ def bootstrap_input(input_type="text", placeholder=""):
 def bootstrap_select():
     return forms.Select(attrs={"class": "form-control"})
 
-def bootstrap_number(step="0.01", readonly=False):
-    attrs = {"class": "form-control", "step": step}
+def bootstrap_number(step="0.01", readonly=False, placeholder=""):
+    attrs = {"class": "form-control", "step": step, "placeholder": placeholder}
     if readonly:
         attrs["readonly"] = "readonly"
     return forms.NumberInput(attrs=attrs)
@@ -60,24 +61,39 @@ class EmbarqueCargaForm(forms.ModelForm):
     Aquí es donde el usuario define cuántas unidades salen.
     """
     class Meta:
-        model = EmbarqueCarga
-        fields = ["producto", "tipo_embalaje", "cantidad_unidades"]
+        model = EmbarqueItem
+        fields = ["producto", "cantidad_unidades", "cantidad_kg", "cantidad_litros", "tipo_embalaje"]
         widgets = {
             "producto": bootstrap_select(),
+            "cantidad_unidades": bootstrap_number(step="1", placeholder="Und"),
+            "cantidad_kg": bootstrap_number(step="0.01", placeholder="Kg"),
+            "cantidad_litros": bootstrap_number(step="0.01", placeholder="Lts"),
             "tipo_embalaje": bootstrap_select(),
-            "cantidad_unidades": bootstrap_number(step="1"),
         }
 
-    def clean_cantidad_unidades(self):
-        cant = self.cleaned_data.get("cantidad_unidades")
-        if cant and cant <= 0:
-            raise ValidationError("La cantidad debe ser mayor a cero.")
-        return cant
+    def clean(self):
+        cleaned_data = super().clean()
+        producto = cleaned_data.get("producto")
+        cant_und = cleaned_data.get("cantidad_unidades")
+        cant_kg = cleaned_data.get("cantidad_kg")
+        cant_lts = cleaned_data.get("cantidad_litros")
+
+        if not producto:
+            return cleaned_data
+
+        if producto.tipo_medida == 'kg' and not cant_kg:
+            raise ValidationError("Debe especificar los kilogramos (kg) para este producto.")
+        if producto.tipo_medida == 'litro' and not cant_lts:
+            raise ValidationError("Debe especificar los litros (lts) para este producto.")
+        if producto.tipo_medida == 'unidad' and not cant_und:
+            raise ValidationError("Debe especificar las unidades (und) para este producto.")
+        
+        return cleaned_data
 
 
 EmbarqueCargaFormSet = inlineformset_factory(
     Embarque,
-    EmbarqueCarga,
+    EmbarqueItem,
     form=EmbarqueCargaForm,
     extra=3,
     can_delete=True
@@ -144,3 +160,38 @@ class VehiculoForm(forms.ModelForm):
             "modelo": bootstrap_input(placeholder="Ej: 2024"),
             "capacidad_carga_kg": bootstrap_number(),
         }
+class NovedadEmbarqueForm(forms.ModelForm):
+    cantidad = forms.DecimalField(
+        label="Cantidad (Und o Kg)", 
+        widget=bootstrap_number(),
+        help_text="Ingrese la cantidad en la unidad de medida del producto."
+    )
+
+    class Meta:
+        model = NovedadEmbarque
+        fields = ["producto", "tipo", "cantidad", "descripcion"]
+        widgets = {
+            "producto": bootstrap_select(),
+            "tipo": bootstrap_select(),
+            "descripcion": bootstrap_input(placeholder="Ej: Se rompió en el descargue"),
+        }
+
+    def save(self, commit=True):
+        instance = super().save(commit=False)
+        cantidad = self.cleaned_data.get("cantidad")
+        if instance.producto.tipo_medida == 'kg':
+            instance.cantidad_kg = cantidad
+            instance.cantidad_unidades = 0
+            instance.cantidad_litros = 0
+        elif instance.producto.tipo_medida == 'litro':
+            instance.cantidad_litros = cantidad
+            instance.cantidad_unidades = 0
+            instance.cantidad_kg = 0
+        else:
+            instance.cantidad_unidades = cantidad
+            instance.cantidad_kg = 0
+            instance.cantidad_litros = 0
+        
+        if commit:
+            instance.save()
+        return instance

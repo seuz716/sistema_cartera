@@ -6,6 +6,7 @@ from django.db.models import Sum
 from django.db import transaction
 from django.contrib import messages
 from django.http import JsonResponse
+from decimal import Decimal
 
 from .models import Venta, DetalleVenta, ConfiguracionFactura, generar_consecutivo
 from productos.models import Producto
@@ -136,6 +137,28 @@ def producto_empaque_json(request, pk):
     })
 
 
+@login_required
+def embarque_inventario_json(request, pk):
+    """
+    Devuelve el inventario disponible en un embarque específico.
+    """
+    embarque = get_object_or_404(Embarque, pk=pk)
+    inventory = embarque.obtener_inventario_transito()
+    
+    # Formateamos para JSON (Decimal -> float)
+    formatted_inventory = {}
+    for pid, data in inventory.items():
+        formatted_inventory[pid] = {
+            'nombre': data['nombre'],
+            'disponible': float(data['cantidad']),
+            'unidad': data['tipo_medida'].upper()
+        }
+    
+    return JsonResponse({
+        'inventario': formatted_inventory
+    })
+
+
 # ─────────────────────────────────────────────
 # CREAR VENTA
 # ─────────────────────────────────────────────
@@ -155,11 +178,21 @@ def venta_create(request):
             descuentos = form.cleaned_data.get('descuentos') or 0
             flete = form.cleaned_data.get('flete') or 0
 
-            subtotal_calculado = sum(
-                (f.cleaned_data.get('cantidad_facturada', 0) or 0) * (f.cleaned_data.get('precio_unitario', 0) or 0)
-                for f in formset.forms
-                if hasattr(f, 'cleaned_data') and f.cleaned_data and not f.cleaned_data.get('DELETE')
-            )
+            subtotal_calculado = Decimal('0.00')
+            for f in formset.forms:
+                if hasattr(f, 'cleaned_data') and f.cleaned_data and not f.cleaned_data.get('DELETE'):
+                    prod = f.cleaned_data.get('producto')
+                    precio = f.cleaned_data.get('precio_unitario') or Decimal('0.00')
+                    
+                    cant = Decimal('0.00')
+                    if prod.tipo_medida == 'kg':
+                        cant = f.cleaned_data.get('cantidad_kg') or Decimal('0.00')
+                    elif prod.tipo_medida == 'litro':
+                        cant = f.cleaned_data.get('cantidad_litros') or Decimal('0.00')
+                    else:
+                        cant = f.cleaned_data.get('cantidad_unidades') or Decimal('0.00')
+                    
+                    subtotal_calculado += (cant * precio)
 
             if descuentos > subtotal_calculado:
                 messages.error(
@@ -209,5 +242,36 @@ def venta_create(request):
         'form': form,
         'formset': formset,
         'proxima_factura': proxima_factura,
+        'productos_list': Producto.objects.filter(activo=True),
+    })
+
+
+@login_required
+def venta_update(request, pk):
+    venta = get_object_or_404(Venta, pk=pk)
+    
+    if request.method == 'POST':
+        form = VentaForm(request.POST, instance=venta)
+        formset = DetalleVentaFormSet(request.POST, instance=venta)
+
+        if form.is_valid() and formset.is_valid():
+            try:
+                with transaction.atomic():
+                    venta = form.save()
+                    formset.save()
+                    venta.actualizar_totales()
+                
+                messages.success(request, f"✅ Factura {venta.factura} actualizada.")
+                return redirect('ventas:detalle', pk=venta.pk)
+            except Exception as e:
+                messages.error(request, f"Error al actualizar: {str(e)}")
+    else:
+        form = VentaForm(instance=venta)
+        formset = DetalleVentaFormSet(instance=venta)
+
+    return render(request, 'ventas/venta_form.html', {
+        'form': form,
+        'formset': formset,
+        'venta': venta,
         'productos_list': Producto.objects.filter(activo=True),
     })

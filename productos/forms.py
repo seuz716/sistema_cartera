@@ -8,8 +8,9 @@ class ProductoForm(forms.ModelForm):
         fields = [
             "nombre",
             "descripcion",
-            "imagen",              # 👈 nuevo campo
-            "unidad_medida",
+            "imagen",
+            "tipo_medida",
+            "controla_peso_variable",
             "precio_unitario",
             "stock_actual",
             "control_inventario",
@@ -22,7 +23,8 @@ class ProductoForm(forms.ModelForm):
             "precio_unitario": forms.NumberInput(attrs={"step": "0.01", "class": "form-control"}),
             "stock_actual": forms.NumberInput(attrs={"step": "0.01", "class": "form-control"}),
             "nombre": forms.TextInput(attrs={"class": "form-control"}),
-            "unidad_medida": forms.Select(attrs={"class": "form-select"}),
+            "tipo_medida": forms.Select(attrs={"class": "form-select"}),
+            "controla_peso_variable": forms.CheckboxInput(attrs={"class": "form-check-input"}),
             "control_inventario": forms.CheckboxInput(attrs={"class": "form-check-input"}),
             "activo": forms.CheckboxInput(attrs={"class": "form-check-input"}),
         }

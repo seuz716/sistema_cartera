@@ -165,10 +165,18 @@
                                 {{ form.descripcion }}
                             </div>
 
-                            <!-- Unidad y Precio -->
+                            <!-- Unidad y Peso -->
                             <div class="col-md-6">
-                                <label class="form-label" for="{{ form.unidad_medida.id_for_label }}">Unidad</label>
-                                {{ form.unidad_medida }}
+                                <label class="form-label" for="{{ form.tipo_medida.id_for_label }}">Unidad</label>
+                                {{ form.tipo_medida }}
+                            </div>
+
+                            <div class="col-md-6">
+                                <label class="form-label">Control Especial</label>
+                                <div class="form-check form-switch switch-container ms-0 ps-5 mt-2">
+                                    {{ form.controla_peso_variable }}
+                                    <label class="form-check-label fw-bold" for="{{ form.controla_peso_variable.id_for_label }}">Peso Variable</label>
+                                </div>
                             </div>
 
                             <div class="col-md-6">

@@ -2,11 +2,11 @@ from django.contrib import admin
 from .models import (
     Vehiculo, Transportador, Ruta, TipoEmbalaje, 
     CapacidadEmbalaje, TarifaTransporte, Embarque, 
-    EmbarqueCarga, GastoEmbarque
+    EmbarqueItem, GastoEmbarque
 )
 
-class EmbarqueCargaInline(admin.TabularInline):
-    model = EmbarqueCarga
+class EmbarqueItemInline(admin.TabularInline):
+    model = EmbarqueItem
     extra = 1
 
 class GastoEmbarqueInline(admin.TabularInline):
@@ -50,7 +50,7 @@ class EmbarqueAdmin(admin.ModelAdmin):
     )
     list_filter = ('estado', 'fecha', 'ruta')
     search_fields = ('numero',)
-    inlines = [EmbarqueCargaInline, GastoEmbarqueInline]
+    inlines = [EmbarqueItemInline, GastoEmbarqueInline]
     readonly_fields = ('numero', 'peso_total_kg', 'ingresos_ventas', 'gastos_operativos', 'pago_transportador', 'utilidad_neta', 'fecha_creacion', 'fecha_modificacion')
     
     fieldsets = (

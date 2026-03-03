@@ -19,13 +19,25 @@ class VentaForm(forms.ModelForm):
     )
 
     embarque = forms.ModelChoiceField(
-        queryset=Embarque.objects.filter(estado__in=['PROGRAMADO', 'CARGANDO', 'EN_RUTA']).order_by('-fecha', '-numero'),
+        queryset=Embarque.objects.filter(estado='transito').order_by('-fecha', '-numero'),
         widget=forms.Select(attrs={
             "class": "form-select form-select-lg rounded-3 border-light-subtle shadow-sm",
             "id": "id_embarque",
         }),
         required=True,
         empty_label="— Selecciona un embarque activo —",
+    )
+
+    fecha = forms.DateField(
+        widget=forms.DateInput(
+            format='%Y-%m-%d',
+            attrs={
+                'type': 'text', 
+                'class': 'form-control form-control-lg rounded-3 border-light-subtle shadow-sm',
+                'id': 'id_fecha'
+            }
+        ),
+        input_formats=['%Y-%m-%d']
     )
 
     class Meta:
@@ -36,10 +48,6 @@ class VentaForm(forms.ModelForm):
             'flete', 'descuentos', 'notas', 'total_embalajes_automatico',
         ]
         widgets = {
-            'fecha': forms.DateInput(attrs={
-                'type': 'date',
-                'class': 'form-control form-control-lg rounded-3 border-light-subtle shadow-sm'
-            }),
             'total_embalajes_entregados': forms.NumberInput(attrs={
                 'class': 'form-control rounded-3 border-light-subtle shadow-sm text-center',
                 'min': '0',
@@ -65,35 +73,50 @@ class VentaForm(forms.ModelForm):
                 'readonly': 'readonly'
             }),
         }
+        
+    def __init__(self, *args, **kwargs):
+        from django.utils import timezone
+        super().__init__(*args, **kwargs)
+        self.fields['total_embalajes_entregados'].initial = 0
+        self.fields['total_embalajes_devueltos'].initial = 0
+        self.fields['total_embalajes_entregados'].required = False
+        self.fields['total_embalajes_devueltos'].required = False
+        # Si el usuario no desea fecha por defecto, comentar la siguiente línea:
+        # if not self.instance.pk:
+        #     self.fields['fecha'].initial = timezone.now().date()
 
 
 class DetalleVentaForm(forms.ModelForm):
     class Meta:
         model = DetalleVenta
-        fields = ['producto', 'unidades_entregadas', 'embalajes_entregados', 'cantidad_facturada', 'precio_unitario']
+        fields = ['producto', 'embarque_item', 'cantidad_unidades', 'cantidad_kg', 'cantidad_litros', 'precio_unitario', 'embalajes_entregados']
         widgets = {
             'producto': forms.Select(attrs={
                 'class': 'form-select producto-select w-100',
                 'data-placeholder': 'Seleccione o busque un producto'
             }),
-            'unidades_entregadas': forms.NumberInput(attrs={
+            'embarque_item': forms.HiddenInput(),
+            'cantidad_unidades': forms.NumberInput(attrs={
                 'class': 'form-control text-end qty-unidades',
-                'min': '1', 'step': '1',
-                'placeholder': 'Ej. 5',
-                'title': 'Unidades físicas entregadas'
+                'min': '0', 'step': '1',
+                'placeholder': 'Unds.',
+            }),
+            'cantidad_kg': forms.NumberInput(attrs={
+                'class': 'form-control text-end qty-kg',
+                'min': '0', 'step': '0.01',
+                'placeholder': 'Kg.',
+            }),
+            'cantidad_litros': forms.NumberInput(attrs={
+                'class': 'form-control text-end qty-litros',
+                'min': '0', 'step': '0.01',
+                'placeholder': 'Lts.',
+            }),
+            'precio_unitario': forms.NumberInput(attrs={
+                'class': 'form-control rounded-3 border-light-subtle shadow-sm text-end',
             }),
             'embalajes_entregados': forms.NumberInput(attrs={
                 'class': 'form-control text-end qty-embalajes',
                 'min': '0', 'step': '1',
-                'placeholder': 'Can.',
-                'title': 'Canastillas (embalajes)'
-            }),
-            'cantidad_facturada': forms.NumberInput(attrs={
-                'class': 'form-control rounded-3 border-light-subtle shadow-sm text-center',
-                'placeholder': '0.00', 'step': '0.01', 'min': '0',
-            }),
-            'precio_unitario': forms.NumberInput(attrs={
-                'class': 'form-control rounded-3 border-light-subtle shadow-sm text-end',
             }),
         }
 

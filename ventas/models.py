@@ -160,6 +160,11 @@ class Venta(AuditModel):
     def __str__(self) -> str:
         return f"Factura {self.factura} - {self.cliente}"
 
+    def save(self, *args, **kwargs):
+        if not self.factura:
+            self.factura = generar_consecutivo()
+        super().save(*args, **kwargs)
+
     def actualizar_totales(self) -> None:
         """
         Recalcula subtotal, total, abono y saldo a partir de los detalles y pagos
@@ -230,22 +235,43 @@ class Venta(AuditModel):
 class DetalleVenta(AuditModel):
     venta = models.ForeignKey(Venta, on_delete=models.CASCADE, related_name="detalles")
     producto = models.ForeignKey(Producto, on_delete=models.PROTECT, related_name="ventas_items")
+    embarque_item = models.ForeignKey(
+        'embarques.EmbarqueItem', 
+        on_delete=models.PROTECT, 
+        related_name="detalles_venta",
+        null=True, # Permitir nulo para ventas sin embarque si el sistema lo permite, pero la regla dice que debe seleccionar embarque
+        blank=True
+    )
     
-    unidades_entregadas = models.PositiveIntegerField(default=1, help_text="Unidades físicas (bloques, paquetes) entregadas")
-    unidades_devueltas = models.PositiveIntegerField(default=0, help_text="Unidades físicas que regresaron")
+    # Estos campos reemplazan unidades_entregadas y cantidad_facturada en la nueva lógica
+    cantidad_unidades = models.DecimalField(max_digits=12, decimal_places=2, null=True, blank=True)
+    cantidad_kg = models.DecimalField(max_digits=12, decimal_places=2, null=True, blank=True)
+    cantidad_litros = models.DecimalField(max_digits=12, decimal_places=2, null=True, blank=True)
     
-    cantidad_facturada = models.DecimalField(max_digits=12, decimal_places=2, help_text="Cantidad monetizada (Kilos o Unidades exactas)")
-    cantidad_devuelta_facturada = models.DecimalField(max_digits=12, decimal_places=2, default=0, help_text="Kilos o Unidades descontadas financieramente")
+    # Mantenemos por compatibilidad y para reportes rápidos (se sincronizarán)
+    unidades_entregadas = models.PositiveIntegerField(default=1)
+    cantidad_facturada = models.DecimalField(max_digits=12, decimal_places=2)
+    
+    unidades_devueltas = models.PositiveIntegerField(default=0)
+    cantidad_devuelta_facturada = models.DecimalField(max_digits=12, decimal_places=2, default=0)
     
     precio_unitario = models.DecimalField(max_digits=12, decimal_places=2)
     precio_total = models.DecimalField(max_digits=12, decimal_places=2, editable=False)
 
     # Relación con el transporte (Nivel Banco)
-    # Cuántas canastillas/unidades logísticas ocupa este item
     embalajes_entregados = models.DecimalField(
         max_digits=8, decimal_places=2, default=0,
-        help_text="Canastillas calculadas para este item (Ej: 16 unds = 1 canastilla)"
+        help_text="Canastillas calculadas para este item"
     )
+
+    @property
+    def cantidad(self):
+        """Devuelve la cantidad en la unidad de medida principal (UND, KG o LTS)."""
+        if self.producto.tipo_medida == 'kg':
+             return self.cantidad_kg or 0
+        elif self.producto.tipo_medida == 'litro':
+             return self.cantidad_litros or 0
+        return self.cantidad_unidades or 0
 
     history = HistoricalRecords()
 
@@ -278,16 +304,129 @@ class DetalleVenta(AuditModel):
             pass
 
     def save(self, *args, **kwargs):
-        # Para evitar problemas con datos antiguos, si cantidad_facturada no se envía, asumimos unidades
-        if not self.cantidad_facturada:
-             self.cantidad_facturada = Decimal(str(self.unidades_entregadas))
-        self.precio_total = self.cantidad_facturada * self.precio_unitario
+        from django.db import transaction
+        from django.core.exceptions import ValidationError
+        from productos.models import MovimientoInventario
 
-        # Si es un registro nuevo y la venta permite cálculo automático, lo hacemos aquí la primera vez
-        if not self.pk and self.venta.total_embalajes_automatico:
+        # 1. Sincronización de campos nuevos -> viejos
+        if self.cantidad_unidades is not None:
+             self.unidades_entregadas = int(self.cantidad_unidades)
+        
+        if self.producto.tipo_medida == 'kg':
+            if self.cantidad_kg is not None:
+                self.cantidad_facturada = self.cantidad_kg
+        elif self.producto.tipo_medida == 'litro':
+            if self.cantidad_litros is not None:
+                self.cantidad_facturada = self.cantidad_litros
+        else:
+            if self.cantidad_unidades is not None:
+                self.cantidad_facturada = self.cantidad_unidades
+
+        # 2. Cálculos base
+        self.precio_total = (self.cantidad_facturada or 0) * (self.precio_unitario or 0)
+
+        # 2. Lógica de Inventario (Solo si la venta tiene un embarque)
+        if self.venta.embarque and not self.embarque_item:
+            from embarques.models import EmbarqueItem
+            try:
+                self.embarque_item = EmbarqueItem.objects.get(
+                    embarque=self.venta.embarque, 
+                    producto=self.producto
+                )
+            except EmbarqueItem.DoesNotExist:
+                # Si el producto no está en el embarque, no podemos descontar inventario.
+                # Dependiendo de la política, esto podría ser un error o permitirse.
+                # Según el usuario, "entra al inventario en transito y... debe ir restando".
+                # Así que debería estar en el embarque.
+                pass
+
+        if self.embarque_item:
+            with transaction.atomic():
+                # Bloquear el embarque_item para evitar concurrencia
+                from embarques.models import EmbarqueItem
+                emb_item = EmbarqueItem.objects.select_for_update().get(pk=self.embarque_item.pk)
+                
+                # Valores a descontar
+                req_unidades = self.cantidad_unidades or 0
+                req_kg = self.cantidad_kg or 0
+                req_litros = self.cantidad_litros or 0
+
+                # Si es una edición, sumar lo anterior al disponible antes de validar
+                if self.pk:
+                    old_obj = DetalleVenta.objects.get(pk=self.pk)
+                    emb_item.cantidad_disponible_unidades += old_obj.cantidad_unidades or 0
+                    emb_item.cantidad_disponible_kg += old_obj.cantidad_kg or 0
+                    emb_item.cantidad_disponible_litros += old_obj.cantidad_litros or 0
+                
+                # Validar disponibilidad
+                if self.producto.tipo_medida == 'kg':
+                    if req_kg > emb_item.cantidad_disponible_kg:
+                        raise ValidationError(f"Stock insuficiente en embarque para {self.producto.nombre}. Disponible: {emb_item.cantidad_disponible_kg} kg")
+                elif self.producto.tipo_medida == 'litro':
+                    if req_litros > emb_item.cantidad_disponible_litros:
+                        raise ValidationError(f"Stock insuficiente en embarque para {self.producto.nombre}. Disponible: {emb_item.cantidad_disponible_litros} lts")
+                else:
+                    if req_unidades > emb_item.cantidad_disponible_unidades:
+                        raise ValidationError(f"Stock insuficiente en embarque para {self.producto.nombre}. Disponible: {emb_item.cantidad_disponible_unidades} und")
+                
+                # Descontar
+                emb_item.cantidad_disponible_unidades -= req_unidades
+                emb_item.cantidad_disponible_kg -= req_kg
+                emb_item.cantidad_disponible_litros -= req_litros
+                emb_item.save()
+
+                super().save(*args, **kwargs)
+
+                # Registrar movimiento de inventario (Audit)
+                # Primero, si es edición, podemos anular el movimiento anterior o crear un ajuste.
+                # Para simplificar, crearemos un movimiento por cada guardado que reste al inventario.
+                # En un sistema real, querríamos rastrear el cambio neto.
+                MovimientoInventario.objects.create(
+                    producto=self.producto,
+                    embarque=self.venta.embarque,
+                    factura=self.venta,
+                    tipo='venta',
+                    cantidad_unidades=-req_unidades,
+                    cantidad_kg=-req_kg,
+                    cantidad_litros=-req_litros,
+                    descripcion=f"Venta Factura {self.venta.factura}"
+                )
+        else:
+            super().save(*args, **kwargs)
+
+        # 3. Recalcular embalajes si es necesario
+        if self.venta.total_embalajes_automatico:
             self.calcular_unidades_embalaje()
+            super().save(update_fields=['embalajes_entregados'])
 
-        super().save(*args, **kwargs)
+    def delete(self, *args, **kwargs):
+        from django.db import transaction
+        from productos.models import MovimientoInventario
+        
+        if self.embarque_item:
+            with transaction.atomic():
+                from embarques.models import EmbarqueItem
+                emb_item = EmbarqueItem.objects.select_for_update().get(pk=self.embarque_item.pk)
+                
+                # Devolver al disponible
+                emb_item.cantidad_disponible_unidades += self.cantidad_unidades or 0
+                emb_item.cantidad_disponible_kg += self.cantidad_kg or 0
+                emb_item.cantidad_disponible_litros += self.cantidad_litros or 0
+                emb_item.save()
+
+                # Registrar movimiento de reversión
+                MovimientoInventario.objects.create(
+                    producto=self.producto,
+                    embarque=self.venta.embarque,
+                    factura=self.venta,
+                    tipo='ajuste_reversion',
+                    cantidad_unidades=self.cantidad_unidades or 0,
+                    cantidad_kg=self.cantidad_kg or 0,
+                    cantidad_litros=self.cantidad_litros or 0,
+                    descripcion=f"Reversión Venta Factura {self.venta.factura} (Item Eliminado)"
+                )
+        
+        super().delete(*args, **kwargs)
 
     def __str__(self):
         return f"{self.producto.nombre} x {self.cantidad} en {self.venta.factura}"

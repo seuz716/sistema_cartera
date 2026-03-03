@@ -75,8 +75,8 @@
                         <thead class="table-light">
                             <tr>
                                 <th>Producto</th>
-                                <th>Tipo de Embalaje</th>
-                                <th>Cantidad (Unidades/Kg)</th>
+                                <th>Cantidad (Und/Kg/Lts)</th>
+                                <th>Tipo de Embalaje (Opcional)</th>
                                 <th>Eliminar</th>
                             </tr>
                         </thead>
@@ -94,17 +94,29 @@
                                     {% if c_form.producto.errors %}<div class="text-danger small">{{ c_form.producto.errors }}</div>{% endif %}
                                 </td>
                                 <td>
-                                    <div class="input-group">
-                                        {{ c_form.tipo_embalaje|add_class:"form-control form-select" }}
-                                        <a href="{% url 'embarques:embalaje_crear' %}" class="btn btn-outline-primary btn-sm" target="_blank" title="Nuevo Embalaje">
-                                            <i class="bi bi-plus-lg"></i>
-                                        </a>
+                                    <div class="row g-1">
+                                        <div class="col-qty col-qty-unidad" style="display:none;">
+                                            {{ c_form.cantidad_unidades|add_class:"form-control text-end" }}
+                                            <span class="small text-muted">Unds</span>
+                                        </div>
+                                        <div class="col-qty col-qty-kg" style="display:none;">
+                                            {{ c_form.cantidad_kg|add_class:"form-control text-end" }}
+                                            <span class="small text-muted">Kg</span>
+                                        </div>
+                                        <div class="col-qty col-qty-litro" style="display:none;">
+                                            {{ c_form.cantidad_litros|add_class:"form-control text-end" }}
+                                            <span class="small text-muted">Lts</span>
+                                        </div>
                                     </div>
-                                    {% if c_form.tipo_embalaje.errors %}<div class="text-danger small">{{ c_form.tipo_embalaje.errors }}</div>{% endif %}
+                                    {% if c_form.cantidad_unidades.errors %}<div class="text-danger small">{{ c_form.cantidad_unidades.errors }}</div>{% endif %}
+                                    {% if c_form.cantidad_kg.errors %}<div class="text-danger small">{{ c_form.cantidad_kg.errors }}</div>{% endif %}
+                                    {% if c_form.cantidad_litros.errors %}<div class="text-danger small">{{ c_form.cantidad_litros.errors }}</div>{% endif %}
                                 </td>
                                 <td>
-                                    {{ c_form.cantidad_unidades|add_class:"form-control text-end" }}
-                                    {% if c_form.cantidad_unidades.errors %}<div class="text-danger small">{{ c_form.cantidad_unidades.errors }}</div>{% endif %}
+                                    <div class="input-group">
+                                        {{ c_form.tipo_embalaje|add_class:"form-control form-select" }}
+                                    </div>
+                                    {% if c_form.tipo_embalaje.errors %}<div class="text-danger small">{{ c_form.tipo_embalaje.errors }}</div>{% endif %}
                                 </td>
                                 <td class="text-center">
                                     {% if carga_formset.can_delete %}
@@ -149,11 +161,46 @@
                 const targetVehiculoId = rutaVehiculoMap[this.value];
                 if (targetVehiculoId) {
                     vehiculoSelect.value = targetVehiculoId;
-                    vehiculoSelect.classList.add('is-valid');
-                    setTimeout(() => vehiculoSelect.classList.remove('is-valid'), 1500);
                 }
             });
         }
+
+        // Lógica para mostrar/ocultar campos de cantidad
+        const productosData = {
+            {% for p in productos_list %}
+            "{{ p.id }}": "{{ p.tipo_medida }}",
+            {% endfor %}
+        };
+
+        function updateQtyFields(row) {
+            const productSelect = row.querySelector('select[name$="-producto"]');
+            const productId = productSelect.value;
+            const tipo = productosData[productId];
+
+            row.querySelectorAll('.col-qty').forEach(el => el.style.display = 'none');
+            
+            if (tipo === 'unidad') {
+                row.querySelector('.col-qty-unidad').style.display = 'block';
+            } else if (tipo === 'kg') {
+                row.querySelector('.col-qty-kg').style.display = 'block';
+            } else if (tipo === 'litro') {
+                row.querySelector('.col-qty-litro').style.display = 'block';
+            } else {
+                // Si no hay producto seleccionado, mostrar unidades por defecto o ninguno
+                row.querySelector('.col-qty-unidad').style.display = 'block';
+            }
+        }
+
+        document.querySelectorAll('tr').forEach(row => {
+            const select = row.querySelector('select[name$="-producto"]');
+            if (select) {
+                select.addEventListener('change', () => updateQtyFields(row));
+                updateQtyFields(row);
+            }
+        });
+
+        // Manejar filas nuevas (si se usa plugin de formsets dinámicos)
+        // Por ahora asumo el extra=3 estático o recarga.
     });
 </script>
 {% endblock %}

@@ -7,7 +7,7 @@ from django.db import IntegrityError
 
 from embarques.models import (
     Embarque, Vehiculo, Transportador, Ruta, 
-    TipoEmbalaje, CapacidadEmbalaje, EmbarqueCarga,
+    TipoEmbalaje, CapacidadEmbalaje, EmbarqueItem,
     TarifaTransporte
 )
 from productos.models import Producto
@@ -67,7 +67,7 @@ class EmbarqueIntegrityTests(TestCase):
         self.embarque.estado = 'EN_RUTA'
         self.embarque.save()
         
-        carga = EmbarqueCarga(
+        carga = EmbarqueItem(
             embarque=self.embarque, producto=self.producto, 
             tipo_embalaje=self.embalaje, cantidad_unidades=10
         )
@@ -80,7 +80,7 @@ class EmbarqueIntegrityTests(TestCase):
 
     def test_reconciliacion_inventario_exceso(self):
         """4 & 6: No permitir (entregado + devuelto) > cargado."""
-        EmbarqueCarga.objects.create(
+        EmbarqueItem.objects.create(
             embarque=self.embarque, producto=self.producto, tipo_embalaje=self.embalaje, cantidad_unidades=100
         )
         
@@ -94,7 +94,7 @@ class EmbarqueIntegrityTests(TestCase):
 
     def test_reconciliacion_exacta(self):
         """5: Permitir entregar exactamente lo cargado."""
-        EmbarqueCarga.objects.create(
+        EmbarqueItem.objects.create(
             embarque=self.embarque, producto=self.producto, tipo_embalaje=self.embalaje, cantidad_unidades=100
         )
         venta = Venta.objects.create(cliente=self.cliente, fecha=timezone.now().date(), embarque=self.embarque, confirmado=True)
@@ -110,7 +110,7 @@ class EmbarqueIntegrityTests(TestCase):
 
     def test_calculo_paquetes(self):
         """7 & 9: cantidad_paquetes calcula correctamente (ej: 32 unidades -> 2 canastillas)."""
-        carga = EmbarqueCarga.objects.create(
+        carga = EmbarqueItem.objects.create(
             embarque=self.embarque, producto=self.producto, tipo_embalaje=self.embalaje, cantidad_unidades=32
         )
         self.assertEqual(carga.cantidad_paquetes, 2)
@@ -122,7 +122,7 @@ class EmbarqueIntegrityTests(TestCase):
     def test_paquetes_sin_capacidad(self):
         """8: Si no existe CapacidadEmbalaje -> devuelve 0 o maneja el error."""
         producto_nuevo = Producto.objects.create(nombre="Postre", precio_unitario=5000)
-        carga = EmbarqueCarga.objects.create(
+        carga = EmbarqueItem.objects.create(
             embarque=self.embarque, producto=producto_nuevo, tipo_embalaje=self.embalaje, cantidad_unidades=10
         )
         # No hay capacidad_embalaje definida para Postre + Canastilla
@@ -137,7 +137,7 @@ class EmbarqueIntegrityTests(TestCase):
         # Cada unidad pesa 1kg (estimado) + canastilla 2.5kg.
         # Cargamos 1000 unidades -> 1000kg + 63 canastillas (1000/16 approx) * 2.5 = 1157.5 kg
         # El vehículo solo soporta 1000kg.
-        EmbarqueCarga.objects.create(
+        EmbarqueItem.objects.create(
             embarque=self.embarque, producto=self.producto, tipo_embalaje=self.embalaje, cantidad_unidades=1000
         )
         
@@ -160,7 +160,7 @@ class EmbarqueIntegrityTests(TestCase):
         self.transportador.save()
 
         # Cargar 160 unidades (10 canastillas)
-        EmbarqueCarga.objects.create(
+        EmbarqueItem.objects.create(
             embarque=self.embarque, producto=self.producto, tipo_embalaje=self.embalaje, cantidad_unidades=160
         )
 
@@ -207,7 +207,7 @@ class EmbarqueIntegrityTests(TestCase):
     def test_flujo_maestro_logistica(self):
         """17: Simulación completa de un ciclo de vida de embarque."""
         # 1. PROGRAMADO: Cargar 160 unidades de Queso
-        EmbarqueCarga.objects.create(
+        EmbarqueItem.objects.create(
             embarque=self.embarque, producto=self.producto, tipo_embalaje=self.embalaje, cantidad_unidades=160
         )
         

@@ -5,8 +5,8 @@ from django.shortcuts import redirect, get_object_or_404
 from django.contrib import messages
 from django.db import transaction
 
-from .models import Embarque, GastoEmbarque
-from .forms import EmbarqueForm, EmbarqueCargaFormSet, GastoEmbarqueForm
+from .models import Embarque, GastoEmbarque, NovedadEmbarque
+from .forms import EmbarqueForm, EmbarqueCargaFormSet, GastoEmbarqueForm, NovedadEmbarqueForm
 
 
 # ========================
@@ -27,19 +27,44 @@ class EmbarqueDetailView(LoginRequiredMixin, DetailView):
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
         context["gastos"] = self.object.gastos.all()
-        context["carga"] = self.object.carga_inicial.all()
-        # Resumen consolidado para el dashboard (se puede refinar más tarde)
+        context["carga"] = self.object.items.all()
+        context["novedades"] = self.object.novedades.all().select_related('producto')
+        context["inventario_transito"] = self.object.obtener_inventario_transito()
+        return context
+
+
+
+class NovedadEmbarqueCreateView(LoginRequiredMixin, CreateView):
+    model = NovedadEmbarque
+    form_class = NovedadEmbarqueForm
+    template_name = "embarques/generic_form.html"
+
+    def form_valid(self, form):
+        form.instance.embarque = get_object_or_404(Embarque, pk=self.kwargs["pk"])
+        messages.success(self.request, "Novedad registrada.")
+        return super().form_valid(form)
+
+    def get_success_url(self):
+        return reverse("embarques:detalle", args=[self.kwargs["pk"]])
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context["titulo"] = "Registrar Novedad (Conciliación)"
         return context
 
 
 class EmbarqueFormsetMixin:
     """Mixin para manejar el formset de carga en Create/Update."""
     def get_context_data(self, **kwargs):
+        from productos.models import Producto
         data = super().get_context_data(**kwargs)
         if self.request.POST:
             data["carga_formset"] = EmbarqueCargaFormSet(self.request.POST, instance=self.object)
         else:
             data["carga_formset"] = EmbarqueCargaFormSet(instance=self.object)
+        
+        # Datos para el JS de la plantilla
+        data["productos_list"] = Producto.objects.filter(activo=True).values('id', 'tipo_medida') or []
         return data
 
     def form_valid(self, form):

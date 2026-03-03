@@ -10,7 +10,8 @@ class ProductoAdmin(admin.ModelAdmin):
     # columnas que se muestran en el listado
     list_display = (
         "nombre",
-        "unidad_medida",
+        "tipo_medida",
+        "controla_peso_variable",
         "precio_unitario",
         "stock_actual",
         "control_inventario",
@@ -26,7 +27,7 @@ class ProductoAdmin(admin.ModelAdmin):
     search_fields = ("nombre", "descripcion")
 
     # filtros laterales
-    list_filter = ("unidad_medida", "activo", "control_inventario")
+    list_filter = ("tipo_medida", "controla_peso_variable", "activo", "control_inventario")
 
     # orden por defecto
     ordering = ("nombre",)
@@ -37,7 +38,7 @@ class ProductoAdmin(admin.ModelAdmin):
     # organización de los campos en el formulario del admin
     fieldsets = (
         ("Información básica", {
-            "fields": ("nombre", "descripcion", "imagen", "unidad_medida", "precio_unitario"),
+            "fields": ("nombre", "descripcion", "imagen", "tipo_medida", "controla_peso_variable", "precio_unitario"),
         }),
         ("Inventario", {
             "fields": ("stock_actual", "control_inventario"),

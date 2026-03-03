@@ -32,9 +32,9 @@
         <!-- Dashboard Logístico (Izquierda) -->
         <div class="col-lg-8">
             <div class="card shadow-sm border-0 rounded-4 mb-4">
-                <div class="card-header bg-white py-3 border-bottom">
-                    <h5 class="mb-0 fw-bold text-secondary"><i class="bi bi-box-seam me-2"></i> Carga Inicial &
-                        Inventario</h5>
+                <div class="card-header bg-white py-3 border-bottom d-flex justify-content-between align-items-center">
+                    <h5 class="mb-0 fw-bold text-secondary"><i class="bi bi-box-seam me-2"></i> Inventario en Tránsito (Stock Actual)</h5>
+                    <span class="badge bg-primary rounded-pill">Tiempo Real</span>
                 </div>
                 <div class="card-body p-0">
                     <div class="table-responsive">
@@ -42,35 +42,77 @@
                             <thead class="bg-light">
                                 <tr>
                                     <th class="ps-4">Producto</th>
-                                    <th>Cargado (Unidades)</th>
-                                    <th>Embalaje</th>
-                                    <th class="text-center">Cant. Paquetes</th>
-                                    <th class="text-end pe-4">Peso Est.</th>
+                                    <th class="text-center">Cargado</th>
+                                    <th class="text-center">Vendido</th>
+                                    <th class="text-center">Novedades</th>
+                                    <th class="text-center bg-info-subtle">Disponible</th>
+                                    <th class="text-end pe-4">Unidad</th>
                                 </tr>
                             </thead>
                             <tbody>
-                                {% for item in carga %}
+                                {% for pid, data in inventario_transito.items %}
                                 <tr>
-                                    <td class="ps-4 fw-bold text-dark">{{ item.producto.nombre }}</td>
-                                    <td>{{ item.cantidad_unidades|floatformat:0 }}</td>
-                                    <td><span class="badge bg-info text-white">{{ item.tipo_embalaje.nombre }}</span>
+                                    <td class="ps-4 fw-bold text-dark">{{ data.nombre }}</td>
+                                    <td class="text-center">{{ data.cargado|floatformat:2 }}</td>
+                                    <td class="text-center text-success">-{{ data.vendido|floatformat:2 }}</td>
+                                    <td class="text-center {% if data.novedades < 0 %}text-danger{% elif data.novedades > 0 %}text-primary{% endif %}">
+                                        {{ data.novedades|floatformat:2 }}
                                     </td>
-                                    <td class="text-center">{{ item.cantidad_paquetes }}</td>
-                                    <td class="text-end pe-4 text-muted">{{ item.peso_item_kg }} kg</td>
+                                    <td class="text-center fw-bold bg-info-subtle">{{ data.cantidad|floatformat:2 }}</td>
+                                    <td class="text-end pe-4 text-muted small text-uppercase">{{ data.unidad }}</td>
                                 </tr>
                                 {% empty %}
                                 <tr>
-                                    <td colspan="5" class="text-center py-4 text-muted">No hay carga inicial registrada.
-                                    </td>
+                                    <td colspan="6" class="text-center py-4 text-muted">No hay inventario registrado.</td>
                                 </tr>
                                 {% endfor %}
                             </tbody>
-                            <tfoot class="table-group-divider">
-                                <tr class="bg-light">
-                                    <td colspan="4" class="ps-4 fw-bold">PESO TOTAL ESTIMADO:</td>
-                                    <td class="text-end pe-4 fw-bold text-primary">{{ embarque.peso_total_kg }} kg</td>
+                        </table>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Novedades y Conciliación -->
+            <div class="card shadow-sm border-0 rounded-4 mb-4">
+                <div class="card-header bg-white py-3 border-bottom d-flex justify-content-between align-items-center">
+                    <h5 class="mb-0 fw-bold text-secondary"><i class="bi bi-clipboard-check me-2"></i> Novedades y Conciliación</h5>
+                    {% if embarque.estado != 'FINALIZADO' %}
+                    <a href="{% url 'embarques:novedad_crear' embarque.pk %}" class="btn btn-sm btn-outline-danger">
+                        <i class="bi bi-plus"></i> Registrar Novedad
+                    </a>
+                    {% endif %}
+                </div>
+                <div class="card-body p-0">
+                    <div class="table-responsive">
+                        <table class="table table-hover align-middle mb-0">
+                            <thead class="bg-light">
+                                <tr>
+                                    <th class="ps-4">Fecha</th>
+                                    <th>Producto</th>
+                                    <th>Tipo</th>
+                                    <th class="text-center">Cantidad</th>
+                                    <th class="pe-4">Descripción</th>
                                 </tr>
-                            </tfoot>
+                            </thead>
+                            <tbody>
+                                {% for novedad in novedades %}
+                                <tr>
+                                    <td class="ps-4 small text-muted">{{ novedad.fecha_hora|date:"d/m H:i" }}</td>
+                                    <td class="fw-bold">{{ novedad.producto.nombre }}</td>
+                                    <td>
+                                        <span class="badge {% if novedad.tipo == 'DANO' or novedad.tipo == 'MERMA' %}bg-danger{% elif novedad.tipo == 'REPOSICION' %}bg-warning{% else %}bg-secondary{% endif %}">
+                                            {{ novedad.get_tipo_display }}
+                                        </span>
+                                    </td>
+                                    <td class="text-center fw-bold">{{ novedad.cantidad }}</td>
+                                    <td class="pe-4 small text-muted">{{ novedad.descripcion|default:"-" }}</td>
+                                </tr>
+                                {% empty %}
+                                <tr>
+                                    <td colspan="5" class="text-center py-4 text-muted">No se han registrado novedades.</td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
                         </table>
                     </div>
                 </div>
